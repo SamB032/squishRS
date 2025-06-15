@@ -14,7 +14,7 @@ pub enum Commands {
     Pack {
         input: String,
         #[clap(short, long)]
-        output: String,
+        output: Option<String>,
     },
 
     /// List contents of a .squish archive
