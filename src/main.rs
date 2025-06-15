@@ -1,3 +1,4 @@
+mod chunk;
 mod cli;
 mod fsutil;
 mod pack;
@@ -31,21 +32,22 @@ fn main() {
             let pb = create_progress_bar(files.len() as u64, "Packing");
 
             // Package file to archive
-            let reduction = match pack::pack_directory(Path::new(&input), Path::new(&output), &files, &pb) {
-                Ok(reduction) => {
-                    pb.finish_and_clear();
-                    reduction
-                }
-                Err(e) => {
-                    eprintln!("{}: {e}", "Failed to pack".red());
-                    std::process::exit(1);
-                }
-            };
+            let reduction =
+                match pack::pack_directory(Path::new(&input), Path::new(&output), &files, &pb) {
+                    Ok(reduction) => {
+                        pb.finish_and_clear();
+                        reduction
+                    }
+                    Err(e) => {
+                        eprintln!("{}: {e}", "Failed to pack".red());
+                        std::process::exit(1);
+                    }
+                };
 
             let display_output = output.strip_prefix("./").unwrap_or(&output);
 
             println!(
-                "{} Saved as {}. Compression Ratio was {:.2}%",
+                "{} Saved as {} \nCompression Ratio was {:.2}%",
                 "Packing complete!".green(),
                 display_output,
                 reduction
@@ -54,7 +56,7 @@ fn main() {
         Commands::List { archive } => {
             println!("Listing contents of '{}'", archive);
         }
-        Commands::Extract {
+        Commands::Unpack {
             archive,
             file,
             output,

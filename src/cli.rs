@@ -20,8 +20,8 @@ pub enum Commands {
     /// List contents of a .squish archive
     List { archive: String },
 
-    /// Extract files from a .squish archive
-    Extract {
+    /// Unpack files from a .squish archive
+    Unpack {
         archive: String,
         #[clap(short, long)]
         file: Option<String>,
