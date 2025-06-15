@@ -1,93 +1,177 @@
 use indicatif::ProgressBar;
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::fs;
-use std::io::{BufWriter, Write};
-use std::path::Path;
-use std::path::PathBuf;
+use std::io::{BufReader, BufWriter, Read, Write};
+use std::path::{Path, PathBuf};
 use zstd::stream::write::Encoder;
 
-/// Packs a directory's files into a single compressed archive.
+
+const CHUNK_SIZE: usize = 1024 * 1024; // 1MB
+
+/// Packs a collection of files from a directory into a single compressed archive using chunk-based
+/// deduplication.
 ///
-/// This function traverses a list of files relative to the `input_dir`, reads each file's contents,
-/// compresses it using zstd compression, and writes metadata along with the compressed data
-/// to the specified `output_file`. The metadata includes the relative file path length and bytes,
-/// the original uncompressed file size, and the compressed data size. A progress bar is updated
-/// to reflect the packing progress.
+/// This function reads each file relative to `input_dir`, splits the file contents into fixed-size
+/// chunks, and computes a SHA256 hash for each chunk. Unique chunks are compressed using zstd and
+/// stored once in the archive. Files are represented as sequences of chunk hashes to enable
+/// deduplication of identical chunks across files.
+///
+/// The archive format includes:
+/// - A magic header and version (`SQUISHR02`)
+/// - The number of unique compressed chunks, followed by each chunk's hash, original size,
+///   compressed size, and compressed data
+/// - The number of files, followed by each file's relative path, original size, chunk count,
+///   and ordered list of chunk hashes
+///
+/// This approach improves compression efficiency by avoiding repeated compression of identical
+/// data chunks across multiple files.
+///
+/// The function updates the given progress bar as it processes each file.
 ///
 /// # Arguments
 ///
-/// * `input_dir` - The root directory path containing the files to be packed.
-/// * `output_file` - The path where the resulting archive file will be created.
-/// * `files` - A vector of `PathBuf` representing all files to pack (should be relative to `input_dir`).
-/// * `pb` - A reference to a `ProgressBar` to display packing progress.
+/// * `input_dir` - The root directory against which file paths are made relative.
+/// * `output_file` - The path where the packed archive will be written.
+/// * `files` - A slice of file paths to pack. Paths should be within `input_dir`.
+/// * `pb` - A progress bar to reflect packing progress.
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` if packing succeeds, or an error boxed as `Box<dyn std::error::Error>`
-/// if any file operation or compression step fails.
+/// Returns a `Result` containing the overall reduction percentage (how much size was saved by compression)
+/// as a `f64` on success, or an error boxed as `Box<dyn std::error::Error>`.
 ///
 /// # Errors
 ///
-/// This function will return an error if:
-/// - The output file cannot be created or written to.
-/// - Any file cannot be read from disk.
-/// - Compression or IO operations fail.
+/// Returns an error if any file cannot be read, if writing to the output file fails, or if compression fails.
 ///
 /// # Example
 ///
 /// ```no_run
 /// use indicatif::ProgressBar;
-/// use std::path::PathBuf;
+/// use std::path::{Path, PathBuf};
 ///
-/// let files: Vec<PathBuf> = vec![ /* ... list of files ... */ ];
+/// let input_dir = Path::new("my_data");
+/// let output = Path::new("archive.squish");
+/// let files: Vec<PathBuf> = vec![ /* list of files */ ];
 /// let pb = ProgressBar::new(files.len() as u64);
-/// pack_directory(Path::new("input_dir"), Path::new("archive.squish"), &files, &pb)?;
+///
+/// match pack_directory(input_dir, output, &files, &pb) {
+///     Ok(reduction) => println!("Compression reduced size by {:.2}%", reduction),
+///     Err(e) => eprintln!("Failed to pack files: {}", e),
+/// }
 /// pb.finish_with_message("Packing complete");
 /// ```
 pub fn pack_directory(
     input_dir: &Path,
     output_file: &Path,
-    files: &Vec<PathBuf>,
+    files: &[PathBuf],
     pb: &ProgressBar,
-) -> Result<(), Box<dyn std::error::Error>> {
-    // Set the output file to write to
+) -> Result<f64, Box<dyn std::error::Error>> {
+
+    // Track overall compression ratio
+    let mut total_orig_size: u64 = 0;
+    let mut total_compressed_size: u64 = 0;
+
+    // Open output writer
     let output = fs::File::create(output_file)?;
     let mut writer = BufWriter::new(output);
 
-    writer.write_all(b"SQUISHR01")?; // magic + version
+    writer.write_all(b"SQUISHR02")?; // Magic + Version
 
+    // Map from chunk hash to (compressed data, original size)
+    let mut chunk_store: HashMap<[u8; 32], (Vec<u8>, u64)> = HashMap::new();
+
+    // Per-file metadata: Vec of chunk hashes (in order)
+    let mut files_metadata = Vec::new();
+
+    // Process all files, splitting into chunks, hashing and compressing unique chunks
     for file_path in files {
-        // Get relative path
         let rel_path = file_path.strip_prefix(input_dir)?;
         let rel_path_str = rel_path.to_string_lossy();
 
-        // Read file data
-        let data = fs::read(&file_path)?;
+        let file = fs::File::open(file_path)?;
+        let metadata = file.metadata()?;
+        let orig_file_size = metadata.len();
+        total_orig_size += orig_file_size;
 
-        // Write path length and path bytes
-        let path_bytes = rel_path_str.as_bytes();
-        let path_len = path_bytes.len() as u32;
-        writer.write_all(&path_len.to_le_bytes())?;
-        writer.write_all(path_bytes)?;
+        let mut reader = BufReader::new(file);
 
-        // Write original file size
-        let orig_size = data.len() as u64;
-        writer.write_all(&orig_size.to_le_bytes())?;
+        let mut file_chunk_hashes = Vec::new();
 
-        // Compress into a temporary buffer to get compressed size
-        let mut compressed_buf = Vec::new();
-        {
-            let mut encoder = Encoder::new(&mut compressed_buf, 0)?;
-            encoder.write_all(&data)?;
-            encoder.finish()?;
+        loop {
+            let mut chunk_buf = vec![0u8; CHUNK_SIZE];
+            let bytes_read = reader.read(&mut chunk_buf)?;
+            if bytes_read == 0 {
+                break;
+            }
+            chunk_buf.truncate(bytes_read);
+
+            // Compute SHA256 hash of chunk
+            let mut hasher = Sha256::new();
+            hasher.update(&chunk_buf);
+            let chunk_hash = hasher.finalize();
+
+            // Convert to array for HashMap key
+            let mut hash_arr = [0u8; 32];
+            hash_arr.copy_from_slice(&chunk_hash);
+
+            if !chunk_store.contains_key(&hash_arr) {
+                // Compress chunk
+                let mut compressed_chunk = Vec::new();
+                {
+                    let mut encoder = Encoder::new(&mut compressed_chunk, 0)?;
+                    encoder.write_all(&chunk_buf)?;
+                    encoder.finish()?;
+                }
+                total_compressed_size += compressed_chunk.len() as u64;
+                chunk_store.insert(hash_arr, (compressed_chunk, bytes_read as u64));
+            }
+
+            file_chunk_hashes.push(hash_arr);
         }
 
-        // Write compressed size and compressed data
-        let compressed_size = compressed_buf.len() as u64;
-        writer.write_all(&compressed_size.to_le_bytes())?;
-        writer.write_all(&compressed_buf)?;
-
-        pb.inc(1); // Increment progress bar
+        files_metadata.push((rel_path_str.into_owned(), orig_file_size, file_chunk_hashes));
+        pb.inc(1);
     }
 
-    Ok(())
+    // Write unique chunks count
+    let unique_chunk_count = chunk_store.len() as u64;
+    writer.write_all(&unique_chunk_count.to_le_bytes())?;
+
+    // Write each unique chunk: hash (32 bytes), original size, compressed size, compressed data
+    for (chunk_hash, (compressed_data, orig_size)) in &chunk_store {
+        writer.write_all(chunk_hash)?;
+        writer.write_all(&orig_size.to_le_bytes())?;
+        let compressed_size = compressed_data.len() as u64;
+        writer.write_all(&compressed_size.to_le_bytes())?;
+        writer.write_all(compressed_data)?;
+    }
+
+    // Write file count
+    let file_count = files_metadata.len() as u64;
+    writer.write_all(&file_count.to_le_bytes())?;
+
+    // Write file metadata
+    for (path, orig_size, chunk_hashes) in &files_metadata {
+        let path_bytes = path.as_bytes();
+        let path_len = path_bytes.len() as u32;
+
+        writer.write_all(&path_len.to_le_bytes())?;
+        writer.write_all(path_bytes)?;
+        writer.write_all(&orig_size.to_le_bytes())?;
+
+        let chunk_count = chunk_hashes.len() as u32;
+        writer.write_all(&chunk_count.to_le_bytes())?;
+
+        // Write chunk hashes in order (each 32 bytes)
+        for hash in chunk_hashes {
+            writer.write_all(hash)?;
+        }
+    }
+
+    let ratio = (total_compressed_size as f64) / (total_orig_size as f64);
+    let reduction_percentage = 100.0 * (1.0 - ratio);
+
+    Ok(reduction_percentage)
 }

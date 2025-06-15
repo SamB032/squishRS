@@ -31,18 +31,24 @@ fn main() {
             let pb = create_progress_bar(files.len() as u64, "Packing");
 
             // Package file to archive
-            if let Err(e) = pack::pack_directory(Path::new(&input), Path::new(&output), &files, &pb)
-            {
-                eprintln!("{}: {e}", "Failed to pack".red());
-                std::process::exit(1);
-            }
+            let reduction = match pack::pack_directory(Path::new(&input), Path::new(&output), &files, &pb) {
+                Ok(reduction) => {
+                    pb.finish_and_clear();
+                    reduction
+                }
+                Err(e) => {
+                    eprintln!("{}: {e}", "Failed to pack".red());
+                    std::process::exit(1);
+                }
+            };
 
-            pb.finish_and_clear();
-            let display_output = output.trim_start_matches("./");
+            let display_output = output.strip_prefix("./").unwrap_or(&output);
+
             println!(
-                "{} Saved to {}",
+                "{} Saved as {}. Compression Ratio was {:.2}%",
                 "Packing complete!".green(),
-                display_output
+                display_output,
+                reduction
             );
         }
         Commands::List { archive } => {
