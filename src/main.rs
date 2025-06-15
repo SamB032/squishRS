@@ -3,12 +3,12 @@ mod fsutil;
 mod pack;
 mod progress;
 
-use std::path::Path;
-use clap::Parser;
-use colored::*;
 use crate::cli::{Cli, Commands};
 use crate::fsutil::walk_dir;
 use crate::progress::create_progress_bar;
+use clap::Parser;
+use colored::*;
+use std::path::Path;
 
 fn main() {
     let cli = Cli::parse();
@@ -31,23 +31,30 @@ fn main() {
             let pb = create_progress_bar(files.len() as u64, "Packing");
 
             // Package file to archive
-            if let Err(e) = pack::pack_directory(Path::new(&input), Path::new(&output), &files, &pb) {
+            if let Err(e) = pack::pack_directory(Path::new(&input), Path::new(&output), &files, &pb)
+            {
                 eprintln!("{}: {e}", "Failed to pack".red());
                 std::process::exit(1);
             }
 
             pb.finish_and_clear();
             let display_output = output.trim_start_matches("./");
-            println!("{} Saved to {}", "Packing complete!".green(), display_output);
+            println!(
+                "{} Saved to {}",
+                "Packing complete!".green(),
+                display_output
+            );
         }
         Commands::List { archive } => {
             println!("Listing contents of '{}'", archive);
         }
-        Commands::Extract { archive, file, output } => {
-            match &file {
-                Some(f) => println!("Extracting '{}' from '{}' to '{}'", f, archive, output),
-                None => println!("Extracting all files from '{}' to '{}'", archive, output),
-            }
-        }
+        Commands::Extract {
+            archive,
+            file,
+            output,
+        } => match &file {
+            Some(f) => println!("Extracting '{}' from '{}' to '{}'", f, archive, output),
+            None => println!("Extracting all files from '{}' to '{}'", archive, output),
+        },
     }
 }

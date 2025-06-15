@@ -18,9 +18,7 @@ pub enum Commands {
     },
 
     /// List contents of a .squish archive
-    List {
-        archive: String,
-    },
+    List { archive: String },
 
     /// Extract files from a .squish archive
     Extract {

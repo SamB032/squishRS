@@ -1,8 +1,8 @@
-use std::path::Path;
-use std::fs;
-use std::io::{Write, BufWriter};
-use std::path::PathBuf;
 use indicatif::ProgressBar;
+use std::fs;
+use std::io::{BufWriter, Write};
+use std::path::Path;
+use std::path::PathBuf;
 use zstd::stream::write::Encoder;
 
 /// Packs a directory's files into a single compressed archive.
@@ -47,9 +47,8 @@ pub fn pack_directory(
     input_dir: &Path,
     output_file: &Path,
     files: &Vec<PathBuf>,
-    pb: &ProgressBar
+    pb: &ProgressBar,
 ) -> Result<(), Box<dyn std::error::Error>> {
-
     // Set the output file to write to
     let output = fs::File::create(output_file)?;
     let mut writer = BufWriter::new(output);

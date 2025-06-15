@@ -24,7 +24,10 @@ pub fn walk_dir(path: &Path) -> io::Result<Vec<PathBuf>> {
 
     if !path.exists() {
         // Path does not exist — return an error
-        return Err(io::Error::new(io::ErrorKind::NotFound, "Path does not exist"));
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Path does not exist",
+        ));
     }
 
     if path.is_dir() {
