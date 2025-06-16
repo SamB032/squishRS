@@ -1,11 +1,9 @@
-use crate::archive::header::write_timestamp;
+use super::chunk::{hash_chunk, ChunkStore, CHUNK_SIZE};
+use super::header::{write_header, write_timestamp};
 use indicatif::ProgressBar;
 use std::fs;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
-
-use super::chunk::{hash_chunk, ChunkStore, CHUNK_SIZE};
-use super::header::write_header;
 
 /// Writes all unique chunks from the `ChunkStore` to the writer.
 ///

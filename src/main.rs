@@ -6,7 +6,7 @@ mod progress;
 use crate::cli::print_list_summary_table;
 use crate::cli::{Cli, Commands};
 use crate::fsutil::walk_dir;
-use crate::progress::create_progress_bar;
+use crate::progress::{create_listing_files_spinner, create_progress_bar};
 use clap::Parser;
 use colored::*;
 use std::path::Path;
@@ -19,6 +19,8 @@ fn main() {
             // Default filename.out if output is not given
             let output = output.unwrap_or_else(|| format!("{}.squish", input));
 
+            let files_spinner = create_listing_files_spinner("Finding Files");
+
             // Count total files for progress bar
             let files = match walk_dir(Path::new(&input)) {
                 Ok(f) => f,
@@ -27,6 +29,7 @@ fn main() {
                     std::process::exit(1);
                 }
             };
+            files_spinner.finish_and_clear();
 
             // Setup progress bar
             let pb = create_progress_bar(files.len() as u64, "Packing");

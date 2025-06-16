@@ -57,7 +57,7 @@ pub fn list_archive(archive_path: &Path) -> Result<ListSummary, Box<dyn std::err
     // Check magic header
     verify_header(&mut reader)?;
 
-    // read the ISO EPOCH
+    // Read the ISO EPOCH
     let mut buf = [0u8; 8];
     reader.read_exact(&mut buf)?;
     let squish_creation_date = convert_timestamp_to_date(u64::from_le_bytes(buf));

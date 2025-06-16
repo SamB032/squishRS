@@ -1,4 +1,5 @@
 use indicatif::{ProgressBar, ProgressStyle};
+use std::time::Duration;
 
 /// Creates and returns a configured progress bar with a custom message.
 ///
@@ -30,5 +31,37 @@ pub fn create_progress_bar(length: u64, message: &'static str) -> ProgressBar {
             .progress_chars("=> "),
     );
     pb.set_message(message);
+    pb
+}
+
+/// Creates and configures a spinner-style progress bar for displaying file listing progress.
+///
+/// The spinner updates every 500 milliseconds and cycles through a sequence of dots to indicate activity.
+///
+/// # Arguments
+///
+/// * `message` - A static string slice used as the message prefix displayed alongside the spinner.
+///
+/// # Returns
+///
+/// * `ProgressBar` - A configured `ProgressBar` spinner instance ready for use.
+///
+/// # Example
+///
+/// ```no_run
+/// let pb = create_listing_files_spinner("Scanning files");
+/// // Perform work...
+/// pb.finish_with_message("Done scanning files");
+/// ```
+pub fn create_listing_files_spinner(message: &'static str) -> ProgressBar {
+    let pb = ProgressBar::new_spinner();
+    pb.set_message(message);
+    pb.enable_steady_tick(Duration::from_millis(500)); // update spinner every 500ms
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .tick_strings(&[".", "..", "...", "...."])
+            .template("{msg} {spinner}")
+            .unwrap(),
+    );
     pb
 }

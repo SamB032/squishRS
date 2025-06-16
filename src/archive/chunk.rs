@@ -1,9 +1,10 @@
-use libflate::deflate::Encoder;
 use sha2::{Digest, Sha256};
 use std::io::Write;
 use std::{collections::HashMap, usize};
+use zstd::stream::Encoder;
 
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
+const COMPRESSION_LEVEL: i32 = 15;
 
 pub struct ChunkStore {
     pub primary_store: HashMap<[u8; 32], (Vec<u8>, u64)>,
@@ -74,9 +75,9 @@ impl ChunkStore {
         // Compress if HashMap miss
         let mut compressed = Vec::new();
         {
-            let mut encoder = Encoder::new(&mut compressed);
+            let mut encoder = Encoder::new(&mut compressed, COMPRESSION_LEVEL)?;
             encoder.write_all(chunk)?;
-            encoder.flush()?;
+            encoder.finish()?;
         }
 
         // Secondary deduplication if compression is effective
