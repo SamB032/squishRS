@@ -39,6 +39,30 @@ pub enum Commands {
     },
 }
 
+/// Prints a summary table of the archive contents including overall statistics
+/// and a detailed breakdown of files grouped by their top-level directory.
+///
+/// The summary table includes:
+/// - Archive size
+/// - Original total size
+/// - Compression reduction percentage
+/// - Number of files
+/// - Number of unique chunks
+///
+/// After the summary, the function prints a "Top-level directory breakdown"
+/// table that shows the count of files grouped by the first path component,
+/// providing insight into the archive's directory structure.
+///
+/// # Arguments
+///
+/// * `summary` - A reference to a `ListSummary` struct containing the archive metadata,
+///               including file paths, sizes, chunk counts, and compression stats.
+///
+/// # Example
+///
+/// ```rust
+/// print_list_summary_table(&summary);
+/// ```
 pub fn print_list_summary_table(summary: &ListSummary) {
     // -- Summary Table --
     let mut summary_table = Table::new();
