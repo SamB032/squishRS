@@ -1,4 +1,4 @@
-use super::header::verify_header;
+use super::header::{convert_timestamp_to_date, verify_header};
 use std::fs::{self, File};
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
@@ -8,6 +8,7 @@ pub struct ListSummary {
     pub total_original_size: u64,
     pub archive_size: u64,
     pub reduction_percentage: f64,
+    pub squish_creation_date: String,
     pub files: Vec<FileEntry>,
 }
 
@@ -56,6 +57,11 @@ pub fn list_archive(archive_path: &Path) -> Result<ListSummary, Box<dyn std::err
     // Check magic header
     verify_header(&mut reader)?;
 
+    // read the ISO EPOCH
+    let mut buf = [0u8; 8];
+    reader.read_exact(&mut buf)?;
+    let squish_creation_date = convert_timestamp_to_date(u64::from_le_bytes(buf));
+
     // Read the number of chunks
     let mut buf = [0u8; 8];
     reader.read_exact(&mut buf)?;
@@ -72,7 +78,7 @@ pub fn list_archive(archive_path: &Path) -> Result<ListSummary, Box<dyn std::err
         reader.read_exact(&mut buf)?; // compressed size
         let compressed_size = u64::from_le_bytes(buf);
 
-        // Skip compressed data
+        // Skip over compressed data
         reader.seek(SeekFrom::Current(compressed_size as i64))?;
     }
 
@@ -105,7 +111,7 @@ pub fn list_archive(archive_path: &Path) -> Result<ListSummary, Box<dyn std::err
         files.push(FileEntry {
             path,
             original_size: orig_size,
-        })
+        });
     }
 
     // Calculate reduction percentage
@@ -120,9 +126,9 @@ pub fn list_archive(archive_path: &Path) -> Result<ListSummary, Box<dyn std::err
         total_original_size: total_orig_size,
         archive_size: archive_size,
         reduction_percentage: reduction_percentage,
+        squish_creation_date: squish_creation_date,
         files: files,
     };
-    // TODO Export creation time
 
     Ok(summary)
 }

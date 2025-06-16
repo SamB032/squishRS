@@ -73,6 +73,7 @@ pub fn print_list_summary_table(summary: &ListSummary) {
     // Set title
     summary_table.set_titles(Row::new(vec![Cell::new("Archive Summary").with_hspan(2)]));
 
+    summary_table.add_row(row!["Creation Date (UTC)", summary.squish_creation_date]);
     summary_table.add_row(row!["Archive size", format_bytes(summary.archive_size)]);
     summary_table.add_row(row![
         "Original size",
