@@ -1,9 +1,9 @@
-mod chunk;
+mod archive;
 mod cli;
 mod fsutil;
-mod pack;
 mod progress;
 
+use crate::cli::print_list_summary_table;
 use crate::cli::{Cli, Commands};
 use crate::fsutil::walk_dir;
 use crate::progress::create_progress_bar;
@@ -33,7 +33,7 @@ fn main() {
 
             // Package file to archive
             let reduction =
-                match pack::pack_directory(Path::new(&input), Path::new(&output), &files, &pb) {
+                match archive::pack_directory(Path::new(&input), Path::new(&output), &files, &pb) {
                     Ok(reduction) => {
                         pb.finish_and_clear();
                         reduction
@@ -47,14 +47,36 @@ fn main() {
             let display_output = output.strip_prefix("./").unwrap_or(&output);
 
             println!(
-                "{} Saved as {} \nCompression Ratio was {:.2}%",
+                "{} Saved as {} \nCompression Ratio was {:.1}%",
                 "Packing complete!".green(),
                 display_output,
                 reduction
             );
         }
-        Commands::List { archive } => {
-            println!("Listing contents of '{}'", archive);
+        Commands::List { archive, simple } => {
+            let summary = match archive::list_archive(Path::new(&archive)) {
+                Ok(summary) => summary,
+                Err(e) => {
+                    eprint!("{}: {}", "Failed to list files".red(), e);
+                    std::process::exit(1)
+                }
+            };
+
+            if simple {
+                // Make it machine readable, could be piped to fzf
+                println!(
+                    "squish_size(bytes): {}, original_size(bytes): {}, reduction: {:.2}%, number_of_files: {}, chunks_count: {}",
+                    summary.archive_size, summary.total_original_size, summary.reduction_percentage, summary.files.len(), summary.unique_chunks
+                );
+
+                println!("{:>10}  {}", "Size (Bytes)", "File Path");
+                println!("----------  --------------------");
+                for file in summary.files {
+                    println!("{:>10}  {}", file.original_size, file.path);
+                }
+            } else {
+                print_list_summary_table(&summary);
+            }
         }
         Commands::Unpack {
             archive,

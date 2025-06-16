@@ -1,11 +1,10 @@
-use crate::chunk;
+use super::chunk::{compress_chunk, hash_chunk, CHUNK_SIZE};
+use super::header::write_header;
 use indicatif::ProgressBar;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
-
-const CHUNK_SIZE: usize = 1024 * 1024; // 1MB
 
 pub fn pack_directory(
     input_dir: &Path,
@@ -21,7 +20,7 @@ pub fn pack_directory(
     let output = fs::File::create(output_file)?;
     let mut writer = BufWriter::new(output);
 
-    chunk::write_header(&mut writer)?;
+    write_header(&mut writer)?;
 
     // Map from chunk hash to (compressed data, original size)
     let mut chunk_store: HashMap<[u8; 32], (Vec<u8>, u64)> = HashMap::new();
@@ -52,11 +51,11 @@ pub fn pack_directory(
             chunk_buf.truncate(bytes_read);
 
             // Compute SHA256 hash of chunk
-            let hash_arr = chunk::hash_chunk(&chunk_buf);
+            let hash_arr = hash_chunk(&chunk_buf);
 
             if !chunk_store.contains_key(&hash_arr) {
                 // Compress chunk
-                let compressed_chunk = chunk::compress_chunk(&chunk_buf)?;
+                let compressed_chunk = compress_chunk(&chunk_buf)?;
                 total_compressed_size += compressed_chunk.len() as u64;
                 chunk_store.insert(hash_arr, (compressed_chunk, bytes_read as u64));
             }
@@ -82,7 +81,7 @@ pub fn pack_directory(
     }
 
     // Write file count
-    let file_count = files_metadata.len() as u64;
+    let file_count = files_metadata.len() as u32;
     writer.write_all(&file_count.to_le_bytes())?;
 
     // Write file metadata

@@ -2,55 +2,8 @@ use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use zstd::stream::{Decoder, Encoder};
 
-pub const MAGIC_VERSION: &[u8] = b"SQUISHRS01";
-
-/// Write the header to a archive file
-///
-/// # arguments
-///
-/// * 'writer' - writer instance of the archive file
-///
-/// # returns
-///
-/// * 'std::io::Result<()>' - Error indicating issue writing to the file
-///
-/// # examples
-///
-/// ```
-/// chunk::write_header(&mut writer);
-/// ```
-pub fn write_header<W: Write>(writer: &mut W) -> std::io::Result<()> {
-    writer.write_all(MAGIC_VERSION)
-}
-
-/// Verify the header of an archive
-///
-/// # arguments
-///
-/// * 'reader' - reader instance of the archive file
-///
-/// # returns
-///
-/// * 'std::io::Result<()>' - Error indicating the archive header is invalid
-///
-/// # examples
-///
-/// ```
-/// chunk::verify_header(&mut writer);
-/// ```
-pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
-    let mut header = [0u8; 9];
-    reader.read_exact(&mut header)?;
-
-    if &header != MAGIC_VERSION {
-        Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "Invalid archive header",
-        ))
-    } else {
-        Ok(())
-    }
-}
+pub const CHUNK_SIZE: usize = 512 * 1024; // 1KB
+const COMPRESS_LEVEL: i32 = 12;
 
 /// Calculates the hash of a binary array
 ///
@@ -94,7 +47,7 @@ pub fn hash_chunk(data: &[u8]) -> [u8; 32] {
 pub fn compress_chunk(data: &[u8]) -> std::io::Result<Vec<u8>> {
     let mut compressed = Vec::new();
     {
-        let mut encoder = Encoder::new(&mut compressed, 0)?;
+        let mut encoder = Encoder::new(&mut compressed, COMPRESS_LEVEL)?;
         encoder.write_all(data)?;
         encoder.finish()?;
     }
