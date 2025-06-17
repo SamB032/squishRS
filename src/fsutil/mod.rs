@@ -47,3 +47,6 @@ pub fn walk_dir(path: &Path) -> io::Result<Vec<PathBuf>> {
     }
     Ok(files)
 }
+
+#[cfg(test)]
+mod tests;

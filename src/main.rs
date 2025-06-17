@@ -1,13 +1,12 @@
 mod archive;
-mod cli;
+mod cmd;
 mod fsutil;
-mod progress;
 
-use crate::archive::{pack_squish, unpack_squish};
-use crate::cli::print_list_summary_table;
-use crate::cli::{Cli, Commands};
+use crate::archive::{list_squish, pack_squish, unpack_squish};
+use crate::cmd::progress_bar::{create_listing_files_spinner, create_progress_bar};
+use crate::cmd::{build_list_summary_table, Cli, Commands};
 use crate::fsutil::walk_dir;
-use crate::progress::{create_listing_files_spinner, create_progress_bar};
+
 use clap::Parser;
 use colored::*;
 use std::path::Path;
@@ -57,7 +56,7 @@ fn main() {
             );
         }
         Commands::List { squish, simple } => {
-            let summary = match archive::list_squish(Path::new(&squish)) {
+            let summary = match list_squish(Path::new(&squish)) {
                 Ok(summary) => summary,
                 Err(e) => {
                     eprint!("{}: {}", "Failed to list files".red(), e);
@@ -78,7 +77,8 @@ fn main() {
                     println!("{:>10}  {}", file.original_size, file.path);
                 }
             } else {
-                print_list_summary_table(&summary);
+                let output = build_list_summary_table(&summary);
+                println!("{}", output);
             }
         }
         Commands::Unpack { squish, output } => {

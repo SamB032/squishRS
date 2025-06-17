@@ -1,8 +1,8 @@
-use std::fs::{self, File};
+use crate::fsutil::walk_dir;
+use std::fs;
+use std::fs::File;
 use std::path::Path;
 use tempfile::tempdir;
-
-use squish::fsutil::walk_dir;
 
 #[test]
 fn test_nonexistent_path() {
