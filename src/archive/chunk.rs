@@ -1,6 +1,6 @@
 use sha2::{Digest, Sha256};
-use std::io::Write;
 use std::collections::HashMap;
+use std::io::Write;
 use zstd::stream::Encoder;
 
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB

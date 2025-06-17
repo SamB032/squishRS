@@ -108,11 +108,7 @@ fn write_files_metadata<W: Write>(
 /// # Errors
 ///
 /// Returns an error if reading the file or inserting chunks fails.
-fn process_file(
-    file_path: &Path,
-    input_dir: &Path,
-    chunk_store: &mut ChunkStore,
-) -> PackedResult {
+fn process_file(file_path: &Path, input_dir: &Path, chunk_store: &mut ChunkStore) -> PackedResult {
     let rel_path = file_path.strip_prefix(input_dir)?;
     let rel_path_str = rel_path.to_string_lossy();
 
