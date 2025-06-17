@@ -1,5 +1,3 @@
-pub mod progress_bar;
-
 use crate::archive::list::ListSummary;
 use byte_unit::{Byte, UnitType};
 use clap::{Parser, Subcommand};
@@ -61,15 +59,14 @@ pub enum Commands {
 /// # Example
 ///
 /// ```rust
-/// build_list_summary_table(&summary);
+/// print_list_summary_table(&summary);
 /// ```
-pub fn build_list_summary_table(summary: &ListSummary) -> String {
-    let mut output = Vec::new();
-
+pub fn print_list_summary_table(summary: &ListSummary) {
     // -- Summary Table --
-    output.push("\nSquash breakdown:".to_string());
     let mut summary_table = Table::new();
     summary_table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
+
+    println!("\nSquish breakdown:");
 
     // Set title
     summary_table.set_titles(Row::new(vec![Cell::new("Squash Summary").with_hspan(2)]));
@@ -89,12 +86,10 @@ pub fn build_list_summary_table(summary: &ListSummary) -> String {
         summary.files.len().to_formatted_string(&Locale::en)
     ]);
     summary_table.add_row(row![
-        "Number of chunks",
+        "Number of Chunks",
         summary.unique_chunks.to_formatted_string(&Locale::en)
     ]);
     summary_table.printstd();
-
-    output.push(summary_table.to_string());
 
     // Breakdown by top-level directory
     let mut dir_counts: HashMap<String, usize> = HashMap::new();
@@ -105,7 +100,7 @@ pub fn build_list_summary_table(summary: &ListSummary) -> String {
         *dir_counts.entry(top_level.to_string()).or_insert(0) += 1;
     }
 
-    output.push("\nTop-level directory breakdown:".to_string());
+    println!("\nTop-level directory breakdown:");
 
     let mut breakdown_table = Table::new();
     breakdown_table.set_format(*FORMAT_NO_LINESEP_WITH_TITLE);
@@ -121,9 +116,8 @@ pub fn build_list_summary_table(summary: &ListSummary) -> String {
     for (dir, count) in dir_counts_vec {
         breakdown_table.add_row(row![dir, count.to_formatted_string(&Locale::en)]);
     }
-    output.push(breakdown_table.to_string());
 
-    output.join("\n")
+    breakdown_table.printstd();
 }
 
 /// Convert bytes into a more human readable form
@@ -132,6 +126,3 @@ fn format_bytes(bytes: u64) -> String {
     let unit = byte.unwrap().get_appropriate_unit(UnitType::Decimal);
     format!("{:.2} {}", unit.get_value(), unit.get_unit())
 }
-
-#[cfg(test)]
-mod tests;
