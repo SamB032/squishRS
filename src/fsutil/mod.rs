@@ -15,8 +15,9 @@ use std::path::{Path, PathBuf};
 /// # Examples
 ///
 /// ```
+/// use squish::fsutil::walk_dir;
 /// use std::path::Path;
-/// let files = walk_dir(Path::new("./my_folder")).unwrap();
+/// let files = walk_dir(Path::new(".")).unwrap();
 /// println!("Found {} files", files.len());
 /// ```
 pub fn walk_dir(path: &Path) -> io::Result<Vec<PathBuf>> {
