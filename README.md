@@ -14,6 +14,8 @@
   - [Unpack](#unpack)
 - [Example](#-example)
 - [Development](#-development)
+- [Internals](#-internals)
+- [Contributions](#-contributions)
 - [License](#-license)
 
 ## 🚀 Features
@@ -80,6 +82,16 @@ cargo fmt
 ```
 
 ## 🔬 Internals
+
+- Built on `zstd`, `indicatif`, `prettytable` and `clap`
+- Chunk-based deduplication logic
+- Archives include a manifest mapping files to their chunks for accurate reconstruction
+- Simple `.squish` archive format optimized for speed, space-saving, and portability
+
+## 🙌 Contributions
+
+Contributions, issues, and feature requests are welcome!
+Feel free to open an issue or submit a pull request.
 
 ## 📄 License
 MIT License @ 2025
