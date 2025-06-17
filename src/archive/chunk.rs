@@ -1,6 +1,6 @@
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::io::Write;
-use std::{collections::HashMap, usize};
 use zstd::stream::Encoder;
 
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
@@ -19,7 +19,7 @@ pub struct ChunkStore {
 ///
 /// # returns
 ///
-/// * '[u8;32]' - 32 bit hash
+/// Return an array of type '[u8;32]' representing the 32 bit hash
 ///
 /// # examples
 ///

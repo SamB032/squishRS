@@ -72,7 +72,7 @@ fn main() {
                     summary.archive_size, summary.total_original_size, summary.reduction_percentage, summary.files.len(), summary.unique_chunks
                 );
 
-                println!("{:>10}  {}", "Size (Bytes)", "File Path");
+                println!("{:>10}  File Path", "Size (Bytes)");
                 println!("----------  --------------------");
                 for file in summary.files {
                     println!("{:>10}  {}", file.original_size, file.path);

@@ -26,8 +26,7 @@ pub struct FileEntry {
 /// # Returns
 ///
 /// * `Result<ListSummary, Box<dyn std::error::Error>>` - On success, returns a struct of
-/// `ListSummary` which represents the summary of the archive and its files. On failure, returns an
-/// error.
+///   `ListSummary` which represents the summary of the archive and its files. On failure, returns an error.
 ///
 /// # Errors
 ///
@@ -124,10 +123,10 @@ pub fn list_squish(archive_path: &Path) -> Result<ListSummary, Box<dyn std::erro
     let summary = ListSummary {
         unique_chunks: unique_chunk_count,
         total_original_size: total_orig_size,
-        archive_size: archive_size,
-        reduction_percentage: reduction_percentage,
-        squish_creation_date: squish_creation_date,
-        files: files,
+        archive_size,
+        reduction_percentage,
+        squish_creation_date,
+        files,
     };
 
     Ok(summary)
