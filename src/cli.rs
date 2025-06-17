@@ -24,18 +24,16 @@ pub enum Commands {
 
     /// List contents of a .squish archive
     List {
-        archive: String,
+        squish: String,
         #[arg(long, default_value_t = false)]
         simple: bool,
     },
 
     /// Unpack files from a .squish archive
     Unpack {
-        archive: String,
+        squish: String,
         #[clap(short, long)]
-        file: Option<String>,
-        #[clap(short, long, default_value = ".")]
-        output: String,
+        output: Option<String>,
     },
 }
 

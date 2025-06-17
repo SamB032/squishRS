@@ -3,6 +3,7 @@ mod cli;
 mod fsutil;
 mod progress;
 
+use crate::archive::{pack_squish, unpack_squish};
 use crate::cli::print_list_summary_table;
 use crate::cli::{Cli, Commands};
 use crate::fsutil::walk_dir;
@@ -35,17 +36,16 @@ fn main() {
             let pb = create_progress_bar(files.len() as u64, "Packing");
 
             // Package file to archive
-            let reduction =
-                match archive::pack_directory(Path::new(&input), Path::new(&output), &files, &pb) {
-                    Ok(reduction) => {
-                        pb.finish_and_clear();
-                        reduction
-                    }
-                    Err(e) => {
-                        eprintln!("{}: {e}", "Failed to pack".red());
-                        std::process::exit(1);
-                    }
-                };
+            let reduction = match pack_squish(Path::new(&input), Path::new(&output), &files, &pb) {
+                Ok(reduction) => {
+                    pb.finish_and_clear();
+                    reduction
+                }
+                Err(e) => {
+                    eprintln!("{}: {e}", "Failed to pack".red());
+                    std::process::exit(1);
+                }
+            };
 
             let display_output = output.strip_prefix("./").unwrap_or(&output);
 
@@ -56,8 +56,8 @@ fn main() {
                 reduction
             );
         }
-        Commands::List { archive, simple } => {
-            let summary = match archive::list_archive(Path::new(&archive)) {
+        Commands::List { squish, simple } => {
+            let summary = match archive::list_squish(Path::new(&squish)) {
                 Ok(summary) => summary,
                 Err(e) => {
                     eprint!("{}: {}", "Failed to list files".red(), e);
@@ -81,13 +81,33 @@ fn main() {
                 print_list_summary_table(&summary);
             }
         }
-        Commands::Unpack {
-            archive,
-            file,
-            output,
-        } => match &file {
-            Some(f) => println!("Extracting '{}' from '{}' to '{}'", f, archive, output),
-            None => println!("Extracting all files from '{}' to '{}'", archive, output),
-        },
+        Commands::Unpack { squish, output } => {
+            // Default filename.out if output is not given
+            let output = output.unwrap_or_else(|| {
+                squish
+                    .strip_suffix(".squish")
+                    .unwrap_or(&squish)
+                    .to_string()
+            });
+
+            let files_spinner = create_listing_files_spinner("Unpacking Files");
+            // TODO, see how we could set up a progress bar
+
+            match unpack_squish(Path::new(&squish), Path::new(&output)) {
+                Ok(_) => {
+                    files_spinner.finish_and_clear();
+                    println!(
+                        "{}\n{} was unsquished into /{}",
+                        "Unpacking complete!".green(),
+                        squish,
+                        output
+                    );
+                }
+                Err(e) => {
+                    eprintln!("{}: {e}", "Failed to unpack".red());
+                    std::process::exit(1);
+                }
+            };
+        }
     }
 }

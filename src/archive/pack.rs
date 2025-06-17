@@ -160,7 +160,7 @@ fn process_file(
 /// # Errors
 ///
 /// Returns an error if any file operation or writing fails.
-pub fn pack_directory(
+pub fn pack_squish(
     input_dir: &Path,
     output_file: &Path,
     files: &[PathBuf],

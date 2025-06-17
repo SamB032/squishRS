@@ -45,7 +45,7 @@ pub struct FileEntry {
 ///     println!("File: {}, size: {}", file.path, file.original_size);
 /// }
 /// ```
-pub fn list_archive(archive_path: &Path) -> Result<ListSummary, Box<dyn std::error::Error>> {
+pub fn list_squish(archive_path: &Path) -> Result<ListSummary, Box<dyn std::error::Error>> {
     let file = File::open(archive_path)?;
 
     // Get size of archive
