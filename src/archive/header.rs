@@ -95,7 +95,7 @@ pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
     let mut header = vec![0u8; 12];
     reader.read_exact(&mut header)?;
 
-    if &header != MAGIC_VERSION {
+    if header != MAGIC_VERSION {
         Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             "Invalid archive header",

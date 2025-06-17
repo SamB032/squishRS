@@ -5,6 +5,8 @@ use std::fs;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
+type PackedResult = Result<(String, u64, Vec<[u8; 32]>), Box<dyn std::error::Error>>;
+
 /// Writes all unique chunks from the `ChunkStore` to the writer.
 ///
 /// The format written is:
@@ -110,7 +112,7 @@ fn process_file(
     file_path: &Path,
     input_dir: &Path,
     chunk_store: &mut ChunkStore,
-) -> Result<(String, u64, Vec<[u8; 32]>), Box<dyn std::error::Error>> {
+) -> PackedResult {
     let rel_path = file_path.strip_prefix(input_dir)?;
     let rel_path_str = rel_path.to_string_lossy();
 

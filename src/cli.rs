@@ -54,7 +54,7 @@ pub enum Commands {
 /// # Arguments
 ///
 /// * `summary` - A reference to a `ListSummary` struct containing the archive metadata,
-///               including file paths, sizes, chunk counts, and compression stats.
+///   including file paths, sizes, chunk counts, and compression stats.
 ///
 /// # Example
 ///
