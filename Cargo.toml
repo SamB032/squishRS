@@ -1,5 +1,5 @@
 [package]
-name = "squishrs"
+name = "squish"
 version = "0.1.0"
 edition = "2021"
 

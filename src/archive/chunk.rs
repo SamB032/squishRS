@@ -19,7 +19,7 @@ pub struct ChunkStore {
 ///
 /// # returns
 ///
-/// * '[u8;32]' - 32 bit hash
+/// Return an array of type '[u8;32]' representing the 32 bit hash
 ///
 /// # examples
 ///
