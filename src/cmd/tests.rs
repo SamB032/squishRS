@@ -1,6 +1,6 @@
-use crate::{create_listing_files_spinner, create_progress_bar, build_list_summary_table};
-use crate::archive::list::ListSummary;
 use super::format_bytes;
+use crate::archive::list::ListSummary;
+use crate::{build_list_summary_table, create_listing_files_spinner, create_progress_bar};
 
 #[test]
 fn test_create_progress_bar_basic() {
@@ -36,12 +36,12 @@ fn test_format_bytes() {
 
 #[test]
 fn test_build_list_summary_table() {
-    let summary = ListSummary { 
-        unique_chunks: 32, 
-        total_original_size: 100, 
-        archive_size: 20, 
-        reduction_percentage: 80.0, 
-        squish_creation_date: "DATE".to_string(), 
+    let summary = ListSummary {
+        unique_chunks: 32,
+        total_original_size: 100,
+        archive_size: 20,
+        reduction_percentage: 80.0,
+        squish_creation_date: "DATE".to_string(),
         files: Vec::new(),
     };
     let output = build_list_summary_table(&summary);
