@@ -1,8 +1,8 @@
+use rayon::iter::Either;
+use rayon::prelude::*;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use rayon::prelude::*;
-use rayon::iter::Either;
 
 /// Recursively walks a directory in parallel and returns a vector of all file paths found.
 ///
@@ -46,15 +46,13 @@ pub fn walk_dir(path: &Path) -> io::Result<Vec<PathBuf>> {
                 } else {
                     (None, Some(path))
                 }
-
             })
             .partition_map(|(dir, file)| match (dir, file) {
                 (Some(d), None) => Either::Left(d),
                 (None, Some(f)) => Either::Right(f),
-                _ => unreachable!()
-                
+                _ => unreachable!(),
             });
-            
+
         // Update for next iteration
         stack.extend(dirs);
         files.extend(regular_files);
