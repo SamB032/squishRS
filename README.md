@@ -46,10 +46,6 @@ squish pack ./my-folder -o archive.squish
 ``` shell
 squish list archive.squish
 ```
-optional simpified format:
-``` shell 
-squish list archive.squish --simple
-```
 
 ### Unpack
 ``` shell
@@ -87,6 +83,7 @@ cargo fmt
 - Chunk-based deduplication logic
 - Archives include a manifest mapping files to their chunks for accurate reconstruction
 - Simple `.squish` archive format optimized for speed, space-saving, and portability
+- Parallelized file and directory traversal for fast performance on large datasets using `Rayon`
 
 ## 🙌 Contributions
 
