@@ -4,22 +4,30 @@ mod fsutil;
 
 use crate::archive::{list_squish, pack_squish, unpack_squish};
 use crate::cmd::progress_bar::{create_listing_files_spinner, create_progress_bar};
-use crate::cmd::{build_list_summary_table, Cli, Commands};
+use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
 use crate::fsutil::walk_dir;
 
 use clap::Parser;
 use colored::*;
+use rayon::{ThreadPoolBuildError, ThreadPoolBuilder};
 use std::path::Path;
 
 fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Pack { input, output } => {
+        Commands::Pack {
+            input,
+            output,
+            max_threads,
+        } => {
             // Default filename.out if output is not given
             let output = output.unwrap_or_else(|| format!("{}.squish", input));
 
             let files_spinner = create_listing_files_spinner("Finding Files");
+
+            // Cap the number of threads that can spawn
+            cap_max_threads(max_threads).expect("Failed to Build Rayon Thread Pool");
 
             // Count total files for progress bar
             let files = match walk_dir(Path::new(&input)) {
@@ -35,24 +43,25 @@ fn main() {
             let pb = create_progress_bar(files.len() as u64, "Packing");
 
             // Package file to archive
-            let reduction = match pack_squish(Path::new(&input), Path::new(&output), &files, &pb) {
-                Ok(reduction) => {
-                    pb.finish_and_clear();
-                    reduction
-                }
-                Err(e) => {
-                    eprintln!("{}: {e}", "Failed to pack".red());
-                    std::process::exit(1);
-                }
-            };
+            let compressed_size =
+                match pack_squish(Path::new(&input), Path::new(&output), &files, &pb) {
+                    Ok(compressed_size) => {
+                        pb.finish_and_clear();
+                        compressed_size
+                    }
+                    Err(e) => {
+                        eprintln!("{}: {e}", "Failed to pack".red());
+                        std::process::exit(1);
+                    }
+                };
 
             let display_output = output.strip_prefix("./").unwrap_or(&output);
 
             println!(
-                "{} Saved as {} \nCompression Ratio was {:.1}%",
+                "{} Saved as {} \nCompressed to {}",
                 "Packing complete!".green(),
                 display_output,
-                reduction
+                format_bytes(compressed_size)
             );
         }
         Commands::List { squish, simple } => {
@@ -110,4 +119,33 @@ fn main() {
             };
         }
     }
+}
+
+/// Configures the global Rayon thread pool to use at most `max_number_of_threads` threads.
+///
+/// This function attempts to build and initialize the global Rayon thread pool with the
+/// specified maximum number of threads. It should be called once early in the program
+/// before any parallel computations occur.
+///
+/// # Arguments
+///
+/// * `max_number_of_threads` - The maximum number of worker threads to use in the Rayon thread pool.
+///
+/// # Returns
+///
+/// * `Ok(())` if the global thread pool was successfully initialized.
+/// * `Err(rayon::ThreadPoolBuildError)` if the thread pool has already been initialized or the build fails.
+///
+/// # Examples
+///
+/// ```
+/// cap_max_threads(8)?;
+/// ```
+/// # Note
+///
+/// This function can only be called once per process; subsequent calls will return an error.
+fn cap_max_threads(max_number_of_threads: usize) -> Result<(), ThreadPoolBuildError> {
+    ThreadPoolBuilder::new()
+        .num_threads(max_number_of_threads)
+        .build_global()
 }
