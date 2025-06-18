@@ -6,8 +6,10 @@ use zstd::stream::Encoder;
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
 const COMPRESSION_LEVEL: i32 = 15;
 
-type PrimaryStore = Arc<DashMap<[u8; 32], (Vec<u8>, u64)>>;
-type SecondaryStore = Arc<DashMap<Vec<u8>, Vec<u8>>>;
+type PrimaryStore = Arc<DashMap<[u8; 32], (Arc<[u8]>, u64)>>;
+type SecondaryStore = Arc<DashMap<Vec<u8>, Arc<[u8]>>>;
+
+type ReturnInsertChunk = Result<[u8; 32], Box<dyn std::error::Error + Send + Sync>>;
 
 #[derive(Clone)]
 pub struct ChunkStore {
@@ -64,16 +66,16 @@ impl ChunkStore {
     ///
     /// # Returns
     ///
-    /// Returns the compressed data as a `Vec<u8>`, either retrieved from the store or newly compressed.
+    /// Returns the hash of the chunk if OK
     ///
     /// # Errors
     ///
     /// Returns an error if compression or writing to the encoder fails.
-    pub fn insert(&self, chunk: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    pub fn insert(&self, chunk: &[u8]) -> ReturnInsertChunk {
         // Primary duplication
         let hash = hash_chunk(chunk);
         if let Some(entry) = self.primary_store.get(&hash) {
-            return Ok(entry.value().0.clone());
+            return Ok(*entry.key()); // Already inserted
         }
 
         // Compress if HashMap miss
@@ -84,14 +86,16 @@ impl ChunkStore {
             encoder.finish()?;
         }
 
+        let compressed_arc: Arc<[u8]> = compressed.into();
+
         // Secondary deduplication if compression is effective
-        if compressed.len() < chunk.len() {
+        if compressed_arc.len() < chunk.len() {
             self.secondary_store
-                .insert(chunk.to_vec(), compressed.clone());
+                .insert(chunk.to_vec(), Arc::clone(&compressed_arc));
         }
 
         self.primary_store
-            .insert(hash, (compressed.clone(), chunk.len() as u64));
-        Ok(compressed)
+            .insert(hash, (compressed_arc, chunk.len() as u64));
+        Ok(hash)
     }
 }
