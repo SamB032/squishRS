@@ -10,6 +10,7 @@ byte-unit = "5.1.6"
 chrono = "0.4.41"
 clap = { version = "4.5.40", features = ["derive"] }
 colored = "3.0.0"
+dashmap = "6.1.0"
 indicatif = "0.17.11"
 num-format = "0.4.4"
 prettytable = "0.10.0"

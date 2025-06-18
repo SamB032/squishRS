@@ -1,11 +1,12 @@
 use super::chunk::{hash_chunk, ChunkStore, CHUNK_SIZE};
 use super::header::{write_header, write_timestamp};
 use indicatif::ProgressBar;
+use rayon::prelude::*;
 use std::fs;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
-type PackedResult = Result<(String, u64, Vec<[u8; 32]>), Box<dyn std::error::Error>>;
+type PackedResult = Result<(String, u64, Vec<[u8; 32]>), Box<dyn std::error::Error + Send + Sync>>;
 
 /// Writes all unique chunks from the `ChunkStore` to the writer.
 ///
@@ -32,7 +33,10 @@ fn write_chunks<W: Write>(
     let unique_chunk_count = chunk_store.primary_store.len() as u64;
     writer.write_all(&unique_chunk_count.to_le_bytes())?;
 
-    for (chunk_hash, (compressed_data, orig_size)) in &chunk_store.primary_store {
+    for entry in chunk_store.primary_store.iter() {
+        let chunk_hash = entry.key();
+        let (compressed_data, orig_size) = entry.value();
+
         writer.write_all(chunk_hash)?;
         writer.write_all(&orig_size.to_le_bytes())?;
         let compressed_size = compressed_data.len() as u64;
@@ -108,7 +112,7 @@ fn write_files_metadata<W: Write>(
 /// # Errors
 ///
 /// Returns an error if reading the file or inserting chunks fails.
-fn process_file(file_path: &Path, input_dir: &Path, chunk_store: &mut ChunkStore) -> PackedResult {
+fn process_file(file_path: &Path, input_dir: &Path, chunk_store: &ChunkStore) -> PackedResult {
     let rel_path = file_path.strip_prefix(input_dir)?;
     let rel_path_str = rel_path.to_string_lossy();
 
@@ -128,7 +132,7 @@ fn process_file(file_path: &Path, input_dir: &Path, chunk_store: &mut ChunkStore
         chunk_buf.truncate(bytes_read);
 
         // Insert chunk via ChunkStore
-        chunk_store.insert(&chunk_buf)?;
+        let _ = chunk_store.insert(&chunk_buf);
 
         // Calculate chunk hash and store it for the file metadata
         let chunk_hash = hash_chunk(&chunk_buf);
@@ -163,11 +167,7 @@ pub fn pack_squish(
     output_file: &Path,
     files: &[PathBuf],
     pb: &ProgressBar,
-) -> Result<f64, Box<dyn std::error::Error>> {
-    // Track overall compression ratio
-    let mut total_orig_size: u64 = 0;
-    let mut total_compressed_size: u64 = 0;
-
+) -> Result<u64, Box<dyn std::error::Error>> {
     // Open output writer
     let output = fs::File::create(output_file)?;
     let mut writer = BufWriter::new(output);
@@ -175,33 +175,25 @@ pub fn pack_squish(
     write_header(&mut writer)?;
     write_timestamp(&mut writer)?;
 
-    let mut chunk_store = ChunkStore::new();
-    let mut files_metadata = Vec::new();
+    let chunk_store = ChunkStore::new();
 
-    for file_path in files {
-        let (rel_path_str, orig_file_size, file_chunk_hashes) =
-            process_file(file_path, input_dir, &mut chunk_store)?;
-
-        total_orig_size += orig_file_size;
-        for chunk_hash in &file_chunk_hashes {
-            if let Some((compressed_data, _)) = chunk_store.primary_store.get(chunk_hash) {
-                total_compressed_size += compressed_data.len() as u64;
-            }
-        }
-
-        files_metadata.push((rel_path_str, orig_file_size, file_chunk_hashes));
-        pb.inc(1) // for progress bar
-    }
+    // Run process_file function concurrently
+    let files_metadata: Vec<_> = files
+        .par_iter()
+        .map(|file_path| -> PackedResult {
+            let result = process_file(file_path, input_dir, &chunk_store)?;
+            pb.inc(1);
+            Ok(result)
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| -> Box<dyn std::error::Error> { e.to_string().into() })?;
 
     write_chunks(&mut writer, &chunk_store)?;
     write_files_metadata(&mut writer, &files_metadata)?;
 
-    // Calculate reduction percentage
-    let reduction_percentage = if total_orig_size > 0 {
-        (1.0 - (total_compressed_size as f64 / total_orig_size as f64)) * 100.0
-    } else {
-        0.0
-    };
+    // Track archive size
+    let archive_metadata = fs::metadata(output_file)?;
+    let archive_size = archive_metadata.len();
 
-    Ok(reduction_percentage)
+    Ok(archive_size)
 }

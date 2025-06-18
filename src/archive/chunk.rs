@@ -1,14 +1,15 @@
+use dashmap::DashMap;
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
-use std::io::Write;
+use std::{io::Write, sync::Arc};
 use zstd::stream::Encoder;
 
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
 const COMPRESSION_LEVEL: i32 = 15;
 
+#[derive(Clone)]
 pub struct ChunkStore {
-    pub primary_store: HashMap<[u8; 32], (Vec<u8>, u64)>,
-    pub secondary_store: HashMap<Vec<u8>, Vec<u8>>,
+    pub primary_store: Arc<DashMap<[u8; 32], (Vec<u8>, u64)>>,
+    pub secondary_store: Arc<DashMap<Vec<u8>, Vec<u8>>>,
 }
 
 /// Calculates the hash of a binary array
@@ -38,8 +39,8 @@ pub fn hash_chunk(chunk: &[u8]) -> [u8; 32] {
 impl ChunkStore {
     pub fn new() -> Self {
         ChunkStore {
-            primary_store: HashMap::new(),
-            secondary_store: HashMap::new(),
+            primary_store: Arc::new(DashMap::new()),
+            secondary_store: Arc::new(DashMap::new()),
         }
     }
 
@@ -65,11 +66,11 @@ impl ChunkStore {
     /// # Errors
     ///
     /// Returns an error if compression or writing to the encoder fails.
-    pub fn insert(&mut self, chunk: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    pub fn insert(&self, chunk: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         // Primary duplication
         let hash = hash_chunk(chunk);
-        if let Some((compressed, _)) = self.primary_store.get(&hash) {
-            return Ok(compressed.clone());
+        if let Some(entry) = self.primary_store.get(&hash) {
+            return Ok(entry.value().0.clone());
         }
 
         // Compress if HashMap miss

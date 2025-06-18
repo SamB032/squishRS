@@ -92,7 +92,6 @@ pub fn build_list_summary_table(summary: &ListSummary) -> String {
         "Number of chunks",
         summary.unique_chunks.to_formatted_string(&Locale::en)
     ]);
-    summary_table.printstd();
 
     output.push(summary_table.to_string());
 
@@ -127,7 +126,7 @@ pub fn build_list_summary_table(summary: &ListSummary) -> String {
 }
 
 /// Convert bytes into a more human readable form
-fn format_bytes(bytes: u64) -> String {
+pub fn format_bytes(bytes: u64) -> String {
     let byte = Byte::from_u128(bytes as u128);
     let unit = byte.unwrap().get_appropriate_unit(UnitType::Decimal);
     format!("{:.2} {}", unit.get_value(), unit.get_unit())

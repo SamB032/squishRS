@@ -4,7 +4,7 @@ mod fsutil;
 
 use crate::archive::{list_squish, pack_squish, unpack_squish};
 use crate::cmd::progress_bar::{create_listing_files_spinner, create_progress_bar};
-use crate::cmd::{build_list_summary_table, Cli, Commands};
+use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
 use crate::fsutil::walk_dir;
 
 use clap::Parser;
@@ -35,24 +35,25 @@ fn main() {
             let pb = create_progress_bar(files.len() as u64, "Packing");
 
             // Package file to archive
-            let reduction = match pack_squish(Path::new(&input), Path::new(&output), &files, &pb) {
-                Ok(reduction) => {
-                    pb.finish_and_clear();
-                    reduction
-                }
-                Err(e) => {
-                    eprintln!("{}: {e}", "Failed to pack".red());
-                    std::process::exit(1);
-                }
-            };
+            let compressed_size =
+                match pack_squish(Path::new(&input), Path::new(&output), &files, &pb) {
+                    Ok(compressed_size) => {
+                        pb.finish_and_clear();
+                        compressed_size
+                    }
+                    Err(e) => {
+                        eprintln!("{}: {e}", "Failed to pack".red());
+                        std::process::exit(1);
+                    }
+                };
 
             let display_output = output.strip_prefix("./").unwrap_or(&output);
 
             println!(
-                "{} Saved as {} \nCompression Ratio was {:.1}%",
+                "{} Saved as {} \nCompressed to {}",
                 "Packing complete!".green(),
                 display_output,
-                reduction
+                format_bytes(compressed_size)
             );
         }
         Commands::List { squish, simple } => {
