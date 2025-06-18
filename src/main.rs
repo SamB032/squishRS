@@ -40,20 +40,16 @@ fn main() {
             files_spinner.finish_and_clear();
 
             // Setup progress bar
-            let pb = create_progress_bar(files.len() as u64, "Packing");
+            let mut pb = create_progress_bar(files.len() as u64, "Packing");
 
             // Package file to archive
             let compressed_size =
-                match pack_squish(Path::new(&input), Path::new(&output), &files, &pb) {
-                    Ok(compressed_size) => {
+                pack_squish(Path::new(&input), Path::new(&output), &files, Some(&mut pb))
+                    .unwrap_or_else(|e| {
                         pb.finish_and_clear();
-                        compressed_size
-                    }
-                    Err(e) => {
                         eprintln!("{}: {e}", "Failed to pack".red());
                         std::process::exit(1);
-                    }
-                };
+                    });
 
             let display_output = output.strip_prefix("./").unwrap_or(&output);
 
@@ -99,12 +95,11 @@ fn main() {
                     .to_string()
             });
 
-            let files_spinner = create_listing_files_spinner("Unpacking Files");
-            // TODO, see how we could set up a progress bar
+            let mut pb = create_progress_bar(0, "Reading Chunks");
 
-            match unpack_squish(Path::new(&squish), Path::new(&output)) {
+            match unpack_squish(Path::new(&squish), Path::new(&output), Some(&mut pb)) {
                 Ok(_) => {
-                    files_spinner.finish_and_clear();
+                    pb.finish_and_clear();
                     println!(
                         "{}\n{} was unsquished into /{}",
                         "Unpacking complete!".green(),

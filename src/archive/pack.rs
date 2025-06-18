@@ -166,7 +166,7 @@ pub fn pack_squish(
     input_dir: &Path,
     output_file: &Path,
     files: &[PathBuf],
-    pb: &ProgressBar,
+    pb: Option<&mut ProgressBar>,
 ) -> Result<u64, Box<dyn std::error::Error>> {
     // Open output writer
     let output = fs::File::create(output_file)?;
@@ -182,7 +182,12 @@ pub fn pack_squish(
         .par_iter()
         .map(|file_path| -> PackedResult {
             let result = process_file(file_path, input_dir, &chunk_store)?;
-            pb.inc(1);
+
+            // Increment progres bar if present
+            if let Some(pb) = pb.as_ref() {
+                pb.inc(1);
+            }
+
             Ok(result)
         })
         .collect::<Result<Vec<_>, _>>()

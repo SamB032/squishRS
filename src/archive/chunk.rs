@@ -4,7 +4,7 @@ use std::{io::Write, sync::Arc};
 use zstd::stream::Encoder;
 
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
-const COMPRESSION_LEVEL: i32 = 15;
+const COMPRESSION_LEVEL: i32 = 10;
 
 type PrimaryStore = Arc<DashMap<[u8; 32], (Vec<u8>, u64)>>;
 type SecondaryStore = Arc<DashMap<Vec<u8>, Vec<u8>>>;

@@ -1,4 +1,5 @@
 use super::header::verify_header;
+use indicatif::ProgressBar;
 use std::{
     collections::HashMap,
     fs::{self, File},
@@ -21,6 +22,7 @@ use zstd::stream::decode_all;
 fn read_chunks<R: Read>(
     reader: &mut R,
     chunk_count: u64,
+    pb: Option<&ProgressBar>,
 ) -> Result<HashMap<[u8; 32], Vec<u8>>, Box<dyn std::error::Error>> {
     let mut buf8 = [0u8; 8];
     let mut chunk_map: HashMap<[u8; 32], Vec<u8>> = HashMap::new();
@@ -40,6 +42,11 @@ fn read_chunks<R: Read>(
 
         let decompressed = decode_all(&compressed_data[..])?;
         chunk_map.insert(hash, decompressed);
+
+        // Increment progress bar if it exists
+        if let Some(pb) = pb {
+            pb.inc(1);
+        }
     }
 
     Ok(chunk_map)
@@ -60,6 +67,7 @@ fn rebuild_file<R: Read>(
     file_count: u32,
     chunk_map: &HashMap<[u8; 32], Vec<u8>>,
     output_dir: &Path,
+    pb: Option<&ProgressBar>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut buf4 = [0u8; 4];
     let mut buf8 = [0u8; 8];
@@ -103,6 +111,11 @@ fn rebuild_file<R: Read>(
                 return Err(format!("Missing chunk for file: {}", relative_path).into());
             }
         }
+
+        // Increment progress bar if it exists
+        if let Some(pb) = pb {
+            pb.inc(1);
+        }
     }
 
     Ok(())
@@ -111,6 +124,7 @@ fn rebuild_file<R: Read>(
 pub fn unpack_squish(
     squish_path: &Path,
     output_dir: &Path,
+    pb: Option<&mut ProgressBar>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let file = File::open(squish_path)?;
     let mut reader = BufReader::new(file);
@@ -126,16 +140,33 @@ pub fn unpack_squish(
     reader.read_exact(&mut buf8)?;
     let chunk_count = u64::from_le_bytes(buf8);
 
+    if let Some(pb) = pb.as_ref() {
+        pb.set_length(chunk_count);
+    }
+
     // Read all chunks into memory
-    let chunk_map = read_chunks(&mut reader, chunk_count)?;
+    let chunk_map = read_chunks(&mut reader, chunk_count, pb.as_deref())?;
 
     // Read File Count
     let mut buf4 = [0u8; 4];
     reader.read_exact(&mut buf4)?;
     let file_count = u32::from_le_bytes(buf4);
 
+    // Reset progress bar length to total chunks + files, preserving progress done
+    if let Some(pb) = pb.as_ref() {
+        pb.set_length(file_count as u64);
+        pb.set_message("Rebuilding files");
+        pb.set_position(0);
+    }
+
     // Rebuild file
-    rebuild_file(&mut reader, file_count, &chunk_map, output_dir)?;
+    rebuild_file(
+        &mut reader,
+        file_count,
+        &chunk_map,
+        output_dir,
+        pb.as_deref(),
+    )?;
 
     Ok(())
 }
