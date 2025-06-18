@@ -17,9 +17,8 @@ fn test_path_is_file() {
     let file_path = dir.path().join("file.txt");
     File::create(&file_path).unwrap();
 
-    let files = walk_dir(&file_path).unwrap();
-    assert_eq!(files.len(), 1);
-    assert_eq!(files[0], file_path);
+    let result = walk_dir(&file_path);
+    assert!(result.is_err());
 }
 
 #[test]
