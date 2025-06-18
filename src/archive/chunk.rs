@@ -7,14 +7,11 @@ pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
 const COMPRESSION_LEVEL: i32 = 15;
 
 type PrimaryStore = Arc<DashMap<[u8; 32], (Arc<[u8]>, u64)>>;
-type SecondaryStore = Arc<DashMap<[u8; 32], Arc<[u8]>>>;
-
 type ReturnInsertChunk = Result<[u8; 32], Box<dyn std::error::Error + Send + Sync>>;
 
 #[derive(Clone)]
 pub struct ChunkStore {
     pub primary_store: PrimaryStore,
-    pub secondary_store: SecondaryStore,
 }
 
 /// Calculates the hash of a binary array
@@ -45,7 +42,6 @@ impl ChunkStore {
     pub fn new() -> Self {
         ChunkStore {
             primary_store: Arc::new(DashMap::new()),
-            secondary_store: Arc::new(DashMap::new()),
         }
     }
 
@@ -86,16 +82,9 @@ impl ChunkStore {
             encoder.finish()?;
         }
 
-        let compressed_arc: Arc<[u8]> = compressed.into();
-
-        // Secondary deduplication if compression is effective
-        if compressed_arc.len() < chunk.len() {
-            self.secondary_store.insert(hash, compressed_arc.clone());
-        }
-
         // Store in primary store: hash => (compressed, original length)
         self.primary_store
-            .insert(hash, (compressed_arc, chunk.len() as u64));
+            .insert(hash, (compressed.into(), chunk.len() as u64));
         Ok(hash)
     }
 }
