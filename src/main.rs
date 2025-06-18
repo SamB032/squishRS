@@ -7,16 +7,20 @@ use crate::cmd::progress_bar::{create_listing_files_spinner, create_progress_bar
 use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
 use crate::fsutil::walk_dir;
 
-use rayon::{ThreadPoolBuilder, ThreadPoolBuildError};
 use clap::Parser;
 use colored::*;
+use rayon::{ThreadPoolBuildError, ThreadPoolBuilder};
 use std::path::Path;
 
 fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Pack { input, output, max_threads} => {
+        Commands::Pack {
+            input,
+            output,
+            max_threads,
+        } => {
             // Default filename.out if output is not given
             let output = output.unwrap_or_else(|| format!("{}.squish", input));
 
