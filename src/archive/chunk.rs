@@ -6,10 +6,13 @@ use zstd::stream::Encoder;
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
 const COMPRESSION_LEVEL: i32 = 15;
 
+type PrimaryStore = Arc<DashMap<[u8; 32], (Vec<u8>, u64)>>;
+type SecondaryStore = Arc<DashMap<Vec<u8>, Vec<u8>>>;
+
 #[derive(Clone)]
 pub struct ChunkStore {
-    pub primary_store: Arc<DashMap<[u8; 32], (Vec<u8>, u64)>>,
-    pub secondary_store: Arc<DashMap<Vec<u8>, Vec<u8>>>,
+    pub primary_store: PrimaryStore,
+    pub secondary_store: SecondaryStore,
 }
 
 /// Calculates the hash of a binary array
