@@ -22,6 +22,8 @@ pub enum Commands {
         input: String,
         #[clap(short, long)]
         output: Option<String>,
+        #[clap(long = "max-threads", short = 'j', default_value_t = 20)]
+        max_threads: usize,
     },
 
     /// List contents of a .squish archive
