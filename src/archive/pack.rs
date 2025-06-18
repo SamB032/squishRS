@@ -1,4 +1,4 @@
-use super::chunk::{hash_chunk, ChunkStore, CHUNK_SIZE};
+use super::chunk::{ChunkStore, CHUNK_SIZE};
 use super::header::{write_header, write_timestamp};
 use indicatif::ProgressBar;
 use rayon::prelude::*;
@@ -123,8 +123,8 @@ fn process_file(file_path: &Path, input_dir: &Path, chunk_store: &ChunkStore) ->
     let mut reader = BufReader::new(file);
     let mut file_chunk_hashes = Vec::new();
 
+    let mut chunk_buf = vec![0u8; CHUNK_SIZE];
     loop {
-        let mut chunk_buf = vec![0u8; CHUNK_SIZE];
         let bytes_read = reader.read(&mut chunk_buf)?;
         if bytes_read == 0 {
             break;
@@ -132,11 +132,10 @@ fn process_file(file_path: &Path, input_dir: &Path, chunk_store: &ChunkStore) ->
         chunk_buf.truncate(bytes_read);
 
         // Insert chunk via ChunkStore
-        let _ = chunk_store.insert(&chunk_buf);
+        let chunk_hash = chunk_store.insert(&chunk_buf);
 
         // Calculate chunk hash and store it for the file metadata
-        let chunk_hash = hash_chunk(&chunk_buf);
-        file_chunk_hashes.push(chunk_hash);
+        file_chunk_hashes.push(chunk_hash?);
     }
 
     Ok((rel_path_str.to_string(), orig_file_size, file_chunk_hashes))
