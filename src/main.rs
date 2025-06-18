@@ -139,11 +139,7 @@ fn main() {
 /// # Examples
 ///
 /// ```
-/// use rayon::ThreadPoolBuilder;
-/// fn main() {
-///     cap_max_threads(8)?;
-///     // Run parallel computations here
-/// }
+/// cap_max_threads(8)?;
 /// ```
 /// # Note
 ///
