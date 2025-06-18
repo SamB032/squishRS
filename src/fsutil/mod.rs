@@ -20,9 +20,9 @@ use rayon::iter::Either;
 /// # Examples
 ///
 /// ```
-/// use squish::fsutil::walk_dir_parallel;
+/// use squish::fsutil::walk_dir;
 /// use std::path::Path;
-/// let files = walk_dir_parallel(Path::new(".")).unwrap();
+/// let files = walk_dir(Path::new(".")).unwrap();
 /// println!("Found {} files", files.len());
 /// ```
 pub fn walk_dir(path: &Path) -> io::Result<Vec<PathBuf>> {
