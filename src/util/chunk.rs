@@ -94,8 +94,8 @@ impl ChunkStore {
         self.primary_store.insert(hash, chunk.len() as u64);
 
         Ok(InsertReturn {
-            hash: hash,
-            compressed_data: Some(Arc::new(compressed.into())),
+            hash,
+            compressed_data: Some(Arc::new(compressed)),
         })
     }
 

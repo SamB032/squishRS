@@ -88,7 +88,7 @@ impl ArchiveWriter {
             patch_u64(
                 &mut *guard,
                 self.placeholder_number_of_chunks_pos,
-                self.chunk_store.len() as u64,
+                self.chunk_store.len(),
             )?;
         }
 
@@ -103,10 +103,39 @@ impl ArchiveWriter {
         Ok(size)
     }
 
-    fn process_file(
-        &self,
-        file_path: &Path,
-    ) -> Result<(String, u64, Vec<[u8; 32]>), Box<dyn std::error::Error + Send + Sync>> {
+    /// Processes a single file by reading it in fixed-size chunks, inserting those chunks into
+    /// a chunk store, and optionally sending compressed chunk data through a channel.
+    ///
+    /// # Arguments
+    ///
+    /// * `file_path` - A reference to the path of the file to process.
+    ///
+    /// # Returns
+    ///
+    /// On success, returns a tuple containing:
+    /// - The file path relative to the configured input directory as a `String`.
+    /// - The original uncompressed size of the file as a `u64`.
+    /// - A `Vec` of 32-byte chunk hashes (`[u8; 32]`) representing the chunks of the file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The relative path cannot be derived from the input path.
+    /// - The file cannot be opened or read.
+    /// - Metadata cannot be accessed.
+    /// - Chunk insertion into the chunk store fails.
+    /// - Sending compressed chunk data through the channel fails.
+    ///
+    /// # Behavior
+    ///
+    /// The method:
+    /// - Opens the file and obtains its size.
+    /// - Reads the file in chunks of size `CHUNK_SIZE`.
+    /// - Inserts each chunk into the chunk store, which may return compressed data.
+    /// - If compressed data is returned, it sends a `ChunkMessage` containing the chunk hash,
+    ///   compressed data, and original chunk size through a channel.
+    /// - Collects all chunk hashes to associate with the processed file.
+    fn process_file(&self, file_path: &Path) -> PackedResult {
         let rel_path = file_path.strip_prefix(&self.input_path)?;
         let rel_path_str = rel_path.to_string_lossy();
 
