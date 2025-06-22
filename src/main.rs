@@ -47,33 +47,25 @@ fn main() {
             // Package file to archive
             let archive_writer =
                 ArchiveWriter::new(Path::new(&input), Path::new(&output), Some(&mut pb))
-                    .expect("Failed to create ArchiveWriter");
+                    .unwrap_or_else(|e| {
+                        pb.finish_and_clear();
+                        eprintln!("{}: {e}", "Failed to create ArchiveWriter".red());
+                        std::process::exit(1);
+                    });
 
-            let compressed_size = match archive_writer.pack(&files) {
-                Ok(compressed_size) => {
-                    pb.finish_and_clear();
-                    println!(
-                        "{}\nCompressed to {}\n{}: {}",
-                        "Packing complete!".green(),
-                        output.strip_prefix("./").unwrap_or(&output),
-                        "Final archive size".blue(),
-                        format_bytes(compressed_size)
-                    );
-                    compressed_size
-                }
-                Err(e) => {
-                    eprintln!("{}: {e}", "Failed to pack".red());
-                    pb.finish_and_clear();
-                    std::process::exit(1);
-                }
-            };
+            let compressed_size = archive_writer.pack(&files).unwrap_or_else(|e| {
+                pb.finish_and_clear();
+                eprintln!("{}: {e}", "Failed to pack".red());
+                std::process::exit(1);
+            });
 
-            let display_output = output.strip_prefix("./").unwrap_or(&output);
+            pb.finish_and_clear();
 
             println!(
-                "{} Saved as {} \nCompressed to {}",
+                "{}\nCompressed to {}\n{}: {}",
                 "Packing complete!".green(),
-                display_output,
+                output.strip_prefix("./").unwrap_or(&output),
+                "Final archive size".blue(),
                 format_bytes(compressed_size)
             );
         }

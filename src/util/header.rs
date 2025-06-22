@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local, TimeZone};
-use std::io::{Read, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const MAGIC_VERSION: &[u8] = b"squish000101";
@@ -103,4 +103,63 @@ pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
     } else {
         Ok(())
     }
+}
+
+/// Writes a placeholder `u64` (8 zero bytes) to the writer and returns its stream position.
+///
+/// This function is useful when the actual value (e.g., number of items written) is not yet known.
+/// You can later overwrite this placeholder using [`patch_u64`].
+///
+/// # Arguments
+///
+/// * `writer` - A mutable reference to any writer that implements `Write + Seek`.
+///
+/// # Returns
+///
+/// * `Ok(u64)` - The byte offset in the stream where the placeholder was written.
+/// * `Err` - If writing or getting the stream position fails.
+///
+/// # Example
+///
+/// ```rust
+/// let pos = write_placeholder_u64(&mut writer)?;
+/// // ... later ...
+/// patch_u64(&mut writer, pos, actual_value)?;
+/// ```
+pub fn write_placeholder_u64<W: Write + Seek>(writer: &mut W) -> Result<u64, std::io::Error> {
+    let pos = writer.stream_position()?;
+    writer.write_all(&0u64.to_le_bytes())?;
+    Ok(pos)
+}
+
+/// Overwrites a `u64` value at a previously recorded position in the writer stream.
+///
+/// This is typically used to update a placeholder written earlier with [`write_placeholder_u64`].
+/// After writing the value, the stream is moved to the end to resume normal writing.
+///
+/// # Arguments
+///
+/// * `writer` - A mutable reference to a writer that implements `Write + Seek`.
+/// * `pos` - The byte offset at which to write the new `u64` value.
+/// * `value` - The actual `u64` value to write.
+///
+/// # Returns
+///
+/// * `Ok(())` - If the patch was successful.
+/// * `Err` - If seeking or writing fails.
+///
+/// # Example
+///
+/// ```rust
+/// patch_u64(&mut writer, pos, 1234)?;
+/// ```
+pub fn patch_u64<W: Write + Seek>(
+    writer: &mut W,
+    pos: u64,
+    value: u64,
+) -> Result<(), std::io::Error> {
+    writer.seek(SeekFrom::Start(pos))?;
+    writer.write_all(&value.to_le_bytes())?;
+    writer.seek(SeekFrom::End(0))?;
+    Ok(())
 }

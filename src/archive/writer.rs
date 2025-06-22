@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use crate::fsutil::writer::{writer_thread, ChunkMessage, ThreadSafeWriter};
 use crate::util::chunk::ChunkStore;
 use crate::util::chunk::CHUNK_SIZE;
-use crate::util::header::{write_header, write_timestamp};
+use crate::util::header::{patch_u64, write_header, write_placeholder_u64, write_timestamp};
 
 type PackedResult = Result<(String, u64, Vec<[u8; 32]>), Box<dyn std::error::Error + Send + Sync>>;
 
@@ -20,6 +20,7 @@ pub struct ArchiveWriter {
     sender: Sender<ChunkMessage>,
     progress_bar: Option<ProgressBar>,
     input_path: PathBuf,
+    placeholder_number_of_chunks_pos: u64,
 }
 
 impl ArchiveWriter {
@@ -33,10 +34,13 @@ impl ArchiveWriter {
         let writer = Arc::new(Mutex::new(BufWriter::new(output)));
 
         // Write header and timestamp
+        let placeholder_number_of_chunks_pos;
         {
             let mut guard = writer.lock().unwrap();
             write_header(&mut *guard)?;
             write_timestamp(&mut *guard)?;
+
+            placeholder_number_of_chunks_pos = write_placeholder_u64(&mut *guard)?;
         }
 
         let chunk_store = ChunkStore::new();
@@ -54,6 +58,7 @@ impl ArchiveWriter {
             sender,
             progress_bar: progress_bar.cloned(),
             input_path: input_dir.to_path_buf(),
+            placeholder_number_of_chunks_pos,
         })
     }
 
@@ -76,6 +81,16 @@ impl ArchiveWriter {
 
         // Close sender so writer thread can finish
         drop(self.sender.clone());
+
+        // Write number of chunks in the placeholder
+        {
+            let mut guard = self.writer.lock().unwrap();
+            patch_u64(
+                &mut *guard,
+                self.placeholder_number_of_chunks_pos,
+                self.chunk_store.len() as u64,
+            )?;
+        }
 
         // Write metadata at the end
         self.write_files_metadata(&files_metadata)?;

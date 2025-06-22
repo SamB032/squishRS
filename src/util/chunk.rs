@@ -98,4 +98,45 @@ impl ChunkStore {
             compressed_data: Some(Arc::new(compressed.into())),
         })
     }
+
+    /// Retrieves a copy of the value associated with the given key from the chunk store.
+    ///
+    /// This method looks up the key in the internal `DashMap` and, if found, clones the
+    /// associated `u64` data and returns it. If the key does not exist, it returns `None`.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - A string slice that holds the key for which to retrieve the value.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(u64)` containing the stored value if the key exists.
+    /// * `None` if the key is not found in the store.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let store = ChunkStore::new();
+    /// store.primary_store.insert("chunk1".to_string(), vec![1, 2, 3]);
+    /// assert_eq!(store.get("chunk1"), Some(vec![1, 2, 3]));
+    /// ```
+    pub fn get(&self, key: &[u8; 32]) -> Option<u64> {
+        self.primary_store.get(key).map(|entry| entry.clone())
+    }
+
+    /// Returns the number of entries currently stored in the `ChunkStore`.
+    ///
+    /// # Returns
+    ///
+    /// * `u64` - The count of key-value pairs in the underlying `primary_store`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let store = ChunkStore::new();
+    /// assert_eq!(store.len(), 0);
+    /// ```
+    pub fn len(&self) -> u64 {
+        self.primary_store.len() as u64
+    }
 }
