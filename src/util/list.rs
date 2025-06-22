@@ -1,7 +1,8 @@
-use super::header::{convert_timestamp_to_date, verify_header};
 use std::fs::{self, File};
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
+
+use super::header::{convert_timestamp_to_date, verify_header};
 
 pub struct ListSummary {
     pub unique_chunks: u64,

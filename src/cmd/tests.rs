@@ -1,5 +1,5 @@
 use super::format_bytes;
-use crate::archive::list::ListSummary;
+use crate::util::list::ListSummary;
 use crate::{build_list_summary_table, create_listing_files_spinner, create_progress_bar};
 
 #[test]

@@ -1,11 +1,13 @@
 mod archive;
 mod cmd;
 mod fsutil;
+mod util;
 
-use crate::archive::{list_squish, pack_squish, unpack_squish};
+use crate::archive::ArchiveWriter;
 use crate::cmd::progress_bar::{create_listing_files_spinner, create_progress_bar};
 use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
 use crate::fsutil::walk_dir;
+use crate::util::{list_squish, unpack_squish};
 
 use clap::Parser;
 use colored::*;
@@ -43,20 +45,27 @@ fn main() {
             let mut pb = create_progress_bar(files.len() as u64, "Packing");
 
             // Package file to archive
-            let compressed_size =
-                pack_squish(Path::new(&input), Path::new(&output), &files, Some(&mut pb))
+            let archive_writer =
+                ArchiveWriter::new(Path::new(&input), Path::new(&output), Some(&mut pb))
                     .unwrap_or_else(|e| {
                         pb.finish_and_clear();
-                        eprintln!("{}: {e}", "Failed to pack".red());
+                        eprintln!("{}: {e}", "Failed to create ArchiveWriter".red());
                         std::process::exit(1);
                     });
 
-            let display_output = output.strip_prefix("./").unwrap_or(&output);
+            let compressed_size = archive_writer.pack(&files).unwrap_or_else(|e| {
+                pb.finish_and_clear();
+                eprintln!("{}: {e}", "Failed to pack".red());
+                std::process::exit(1);
+            });
+
+            pb.finish_and_clear();
 
             println!(
-                "{} Saved as {} \nCompressed to {}",
+                "{}\nCompressed to {}\n{}: {}",
                 "Packing complete!".green(),
-                display_output,
+                output.strip_prefix("./").unwrap_or(&output),
+                "Final archive size".blue(),
                 format_bytes(compressed_size)
             );
         }
