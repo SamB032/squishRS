@@ -1,3 +1,5 @@
+pub mod writer;
+
 use rayon::iter::Either;
 use rayon::prelude::*;
 use std::fs;

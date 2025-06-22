@@ -6,13 +6,18 @@ use zstd::stream::Encoder;
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
 const COMPRESSION_LEVEL: i32 = 15;
 
-type PrimaryStore = Arc<DashMap<[u8; 32], (Arc<[u8]>, u64)>>;
-type ReturnInsertChunk = Result<[u8; 32], Box<dyn std::error::Error + Send + Sync>>;
+pub struct InsertReturn {
+    pub hash: [u8; 32],
+    pub compressed_data: Option<Arc<Vec<u8>>>,
+}
 
 #[derive(Clone)]
 pub struct ChunkStore {
     pub primary_store: PrimaryStore,
 }
+
+type PrimaryStore = Arc<DashMap<[u8; 32], u64>>;
+type ReturnInsertChunk = Result<InsertReturn, Box<dyn std::error::Error + Send + Sync>>;
 
 /// Calculates the hash of a binary array
 ///
@@ -71,7 +76,10 @@ impl ChunkStore {
         // Primary duplication
         let hash = hash_chunk(chunk);
         if let Some(entry) = self.primary_store.get(&hash) {
-            return Ok(*entry.key()); // Already inserted
+            return Ok(InsertReturn {
+                hash: *entry.key(),
+                compressed_data: None,
+            });
         }
 
         // Compress if HashMap miss
@@ -83,8 +91,11 @@ impl ChunkStore {
         }
 
         // Store in primary store: hash => (compressed, original length)
-        self.primary_store
-            .insert(hash, (compressed.into(), chunk.len() as u64));
-        Ok(hash)
+        self.primary_store.insert(hash, chunk.len() as u64);
+
+        Ok(InsertReturn {
+            hash: hash,
+            compressed_data: Some(Arc::new(compressed.into())),
+        })
     }
 }

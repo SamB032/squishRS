@@ -1,6 +1,6 @@
 pub mod progress_bar;
 
-use crate::archive::list::ListSummary;
+use crate::util::list::ListSummary;
 use byte_unit::{Byte, UnitType};
 use clap::{Parser, Subcommand};
 use num_format::{Locale, ToFormattedString};
@@ -22,7 +22,7 @@ pub enum Commands {
         input: String,
         #[clap(short, long)]
         output: Option<String>,
-        #[clap(long = "max-threads", short = 'j', default_value_t = 20)]
+        #[clap(long = "max-threads", short = 'j', default_value_t = 30)]
         max_threads: usize,
     },
 
