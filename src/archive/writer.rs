@@ -8,11 +8,10 @@ use indicatif::ProgressBar;
 use rayon::prelude::*;
 
 use crate::fsutil::writer::{writer_thread, ChunkMessage, ThreadSafeWriter};
-use crate::util::chunk::ChunkStore;
-use crate::util::chunk::CHUNK_SIZE;
+use crate::util::chunk::{ChunkHash, ChunkStore, CHUNK_SIZE};
 use crate::util::header::{patch_u64, write_header, write_placeholder_u64, write_timestamp};
 
-type PackedResult = Result<(String, u64, Vec<[u8; 32]>), Box<dyn std::error::Error + Send + Sync>>;
+type PackedResult = Result<(String, u64, Vec<ChunkHash>), Box<dyn std::error::Error + Send + Sync>>;
 
 pub struct ArchiveWriter {
     writer: Arc<Mutex<BufWriter<File>>>,
@@ -194,7 +193,7 @@ impl ArchiveWriter {
     /// Returns an error if any I/O write operation fails.
     fn write_files_metadata(
         &self,
-        files_metadata: &[(String, u64, Vec<[u8; 32]>)],
+        files_metadata: &[(String, u64, Vec<ChunkHash>)],
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Lock the shared writer once
         let mut guard = self.writer.lock().unwrap();

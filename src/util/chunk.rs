@@ -3,11 +3,13 @@ use sha2::{Digest, Sha256};
 use std::{io::Write, sync::Arc};
 use zstd::stream::Encoder;
 
+pub type ChunkHash = [u8; 32];
+
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
 const COMPRESSION_LEVEL: i32 = 15;
 
 pub struct InsertReturn {
-    pub hash: [u8; 32],
+    pub hash: ChunkHash,
     pub compressed_data: Option<Arc<Vec<u8>>>,
 }
 
@@ -16,7 +18,7 @@ pub struct ChunkStore {
     pub primary_store: PrimaryStore,
 }
 
-type PrimaryStore = Arc<DashMap<[u8; 32], u64>>;
+type PrimaryStore = Arc<DashMap<ChunkHash, u64>>;
 type ReturnInsertChunk = Result<InsertReturn, Box<dyn std::error::Error + Send + Sync>>;
 
 /// Calculates the hash of a binary array
@@ -34,7 +36,7 @@ type ReturnInsertChunk = Result<InsertReturn, Box<dyn std::error::Error + Send +
 /// ```
 /// chunk::hash_chunk(&chunk_buf);
 /// ```
-pub fn hash_chunk(chunk: &[u8]) -> [u8; 32] {
+pub fn hash_chunk(chunk: &[u8]) -> ChunkHash {
     let mut hasher = Sha256::new();
     hasher.update(chunk);
     let result = hasher.finalize();

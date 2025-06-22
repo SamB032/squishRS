@@ -3,11 +3,11 @@ mod cmd;
 mod fsutil;
 mod util;
 
-use crate::archive::ArchiveWriter;
+use crate::archive::{ArchiveReader, ArchiveWriter};
 use crate::cmd::progress_bar::{create_listing_files_spinner, create_progress_bar};
 use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
 use crate::fsutil::walk_dir;
-use crate::util::{list_squish, unpack_squish};
+use crate::util::unpack_squish;
 
 use clap::Parser;
 use colored::*;
@@ -70,7 +70,12 @@ fn main() {
             );
         }
         Commands::List { squish, simple } => {
-            let summary = match list_squish(Path::new(&squish)) {
+            let mut archive_reader = ArchiveReader::new(&Path::new(&squish)).unwrap_or_else(|e| {
+                eprint!("{}: {}", "Failed to setup file reader".red(), e);
+                std::process::exit(1)
+            });
+
+            let summary = match archive_reader.get_summary() {
                 Ok(summary) => summary,
                 Err(e) => {
                     eprint!("{}: {}", "Failed to list files".red(), e);

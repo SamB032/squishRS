@@ -1,11 +1,12 @@
 pub mod progress_bar;
 
-use crate::util::list::ListSummary;
+use std::collections::HashMap;
+
+use crate::archive::reader::ArchiveSummary;
 use byte_unit::{Byte, UnitType};
 use clap::{Parser, Subcommand};
 use num_format::{Locale, ToFormattedString};
 use prettytable::{format::consts::FORMAT_NO_LINESEP_WITH_TITLE, row, Cell, Row, Table};
-use std::collections::HashMap;
 
 #[derive(Parser)]
 #[clap(name = "squishrs")]
@@ -57,7 +58,7 @@ pub enum Commands {
 ///
 /// # Arguments
 ///
-/// * `summary` - A reference to a `ListSummary` struct containing the archive metadata,
+/// * `summary` - A reference to a `ArchiveSummary` struct containing the archive metadata,
 ///   including file paths, sizes, chunk counts, and compression stats.
 ///
 /// # Example
@@ -65,7 +66,7 @@ pub enum Commands {
 /// ```rust
 /// build_list_summary_table(&summary);
 /// ```
-pub fn build_list_summary_table(summary: &ListSummary) -> String {
+pub fn build_list_summary_table(summary: &ArchiveSummary) -> String {
     let mut output = Vec::new();
 
     // -- Summary Table --
