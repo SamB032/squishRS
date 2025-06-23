@@ -1,5 +1,5 @@
 use super::format_bytes;
-use crate::util::list::ListSummary;
+use crate::archive::reader::ArchiveSummary;
 use crate::{build_list_summary_table, create_listing_files_spinner, create_progress_bar};
 
 #[test]
@@ -36,7 +36,7 @@ fn test_format_bytes() {
 
 #[test]
 fn test_build_list_summary_table() {
-    let summary = ListSummary {
+    let summary = ArchiveSummary {
         unique_chunks: 32,
         total_original_size: 100,
         archive_size: 20,
