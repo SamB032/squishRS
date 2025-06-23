@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, Read, BufWriter, Write, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use indicatif::ProgressBar;
@@ -56,7 +56,7 @@ impl ArchiveReader {
         reader.read_exact(&mut buf8)?;
         let unique_chunk_count = u64::from_le_bytes(buf8);
 
-        let chunk_table_offset = reader.stream_position()?;
+        let chunk_table_offset = reader.seek(SeekFrom::Current(0))?;
 
         // Skip all chunks
         for _ in 0..unique_chunk_count {
@@ -72,14 +72,14 @@ impl ArchiveReader {
         }
 
         // Get file table offset
-        let file_table_offset = reader.stream_position()?;
+        let file_table_offset = reader.seek(SeekFrom::Current(0))?;
 
         Ok(Self {
             reader,
             archive_size,
             squish_creation_time,
             number_of_chunks: unique_chunk_count,
-            chunk_table_offset,
+            chunk_table_offset: chunk_table_offset,
             file_table_offset,
         })
     }
@@ -167,7 +167,7 @@ impl ArchiveReader {
             unique_chunks: self.number_of_chunks,
             total_original_size: total_orig_size,
             archive_size: self.archive_size,
-            reduction_percentage,
+            reduction_percentage: reduction_percentage,
             squish_creation_date: self.squish_creation_time.clone(),
             files,
         })
@@ -216,8 +216,7 @@ impl ArchiveReader {
         pb: Option<&ProgressBar>,
     ) -> Result<HashMap<ChunkHash, Vec<u8>>, Box<dyn std::error::Error>> {
         // Seek to chunk table offset
-        self.reader
-            .seek(std::io::SeekFrom::Start(self.chunk_table_offset))?;
+        self.reader.seek(std::io::SeekFrom::Start(self.chunk_table_offset))?;
 
         let mut buf8 = [0u8; 8];
         let mut chunk_map: HashMap<[u8; 32], Vec<u8>> = HashMap::new();
@@ -252,7 +251,7 @@ impl ArchiveReader {
         &mut self,
         chunk_map: &HashMap<ChunkHash, Vec<u8>>,
         output_dir: &Path,
-        progress_bar: Option<&ProgressBar>,
+        progress_bar: Option<&ProgressBar>
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Move to the file table
         self.reader.seek(SeekFrom::Start(self.file_table_offset))?;

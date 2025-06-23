@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufReader, BufWriter, Read, Write, Seek};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -155,7 +155,7 @@ impl ArchiveWriter {
             let slice = &chunk_buf[..bytes_read];
 
             // Insert chunk via ChunkStore
-            let result = self.chunk_store.insert(slice)?;
+            let result = self.chunk_store.insert(&slice)?;
 
             if let Some(compressed) = result.compressed_data {
                 let msg = ChunkMessage {
@@ -198,6 +198,10 @@ impl ArchiveWriter {
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Lock the shared writer once
         let mut guard = self.writer.lock().unwrap();
+
+        let mut file = guard.get_ref();
+        let offset = file.seek(std::io::SeekFrom::Current(0))?;
+        println!("File offset: {}", offset);
 
         // Number of files
         let file_count = files_metadata.len() as u32;
