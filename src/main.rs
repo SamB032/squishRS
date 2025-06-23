@@ -44,7 +44,7 @@ fn main() {
             let mut pb = create_progress_bar(files.len() as u64, "Packing");
 
             // Package file to archive
-            let archive_writer =
+            let mut archive_writer =
                 ArchiveWriter::new(Path::new(&input), Path::new(&output), Some(&mut pb))
                     .unwrap_or_else(|e| {
                         pb.finish_and_clear();
