@@ -56,7 +56,7 @@ impl ArchiveReader {
         reader.read_exact(&mut buf8)?;
         let unique_chunk_count = u64::from_le_bytes(buf8);
 
-        let chunk_table_offset = reader.seek(SeekFrom::Current(0))?;
+        let chunk_table_offset = reader.stream_position()?;
 
         // Skip all chunks
         for _ in 0..unique_chunk_count {
@@ -72,14 +72,14 @@ impl ArchiveReader {
         }
 
         // Get file table offset
-        let file_table_offset = reader.seek(SeekFrom::Current(0))?;
+        let file_table_offset = reader.stream_position()?;
 
         Ok(Self {
             reader,
             archive_size,
             squish_creation_time,
             number_of_chunks: unique_chunk_count,
-            chunk_table_offset: chunk_table_offset,
+            chunk_table_offset,
             file_table_offset,
         })
     }
@@ -167,7 +167,7 @@ impl ArchiveReader {
             unique_chunks: self.number_of_chunks,
             total_original_size: total_orig_size,
             archive_size: self.archive_size,
-            reduction_percentage: reduction_percentage,
+            reduction_percentage,
             squish_creation_date: self.squish_creation_time.clone(),
             files,
         })

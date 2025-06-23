@@ -69,7 +69,7 @@ fn main() {
             );
         }
         Commands::List { squish, simple } => {
-            let mut archive_reader = ArchiveReader::new(&Path::new(&squish)).unwrap_or_else(|e| {
+            let mut archive_reader = ArchiveReader::new(Path::new(&squish)).unwrap_or_else(|e| {
                 eprint!("{}: {}", "Failed to setup file reader".red(), e);
                 std::process::exit(1)
             });
@@ -110,7 +110,7 @@ fn main() {
 
             let mut pb = create_progress_bar(0, "Reading Chunks");
 
-            let mut archive_reader = ArchiveReader::new(&Path::new(&squish)).unwrap_or_else(|e| {
+            let mut archive_reader = ArchiveReader::new(Path::new(&squish)).unwrap_or_else(|e| {
                 eprint!("{}: {}", "Failed to setup file reader".red(), e);
                 std::process::exit(1)
             });
