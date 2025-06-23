@@ -16,10 +16,11 @@ type PackedResult = Result<(String, u64, Vec<ChunkHash>), Box<dyn std::error::Er
 pub struct ArchiveWriter {
     writer: Arc<Mutex<BufWriter<File>>>,
     chunk_store: ChunkStore,
-    sender: Sender<ChunkMessage>,
+    sender: Option<Sender<ChunkMessage>>,
     progress_bar: Option<ProgressBar>,
     input_path: PathBuf,
     placeholder_number_of_chunks_pos: u64,
+    writer_handle: Option<std::thread::JoinHandle<std::io::Result<()>>>,
 }
 
 impl ArchiveWriter {
@@ -47,21 +48,22 @@ impl ArchiveWriter {
 
         // Spawn writer thread
         let thread_safe_writer = ThreadSafeWriter::new(Arc::clone(&writer));
-        std::thread::spawn(move || -> std::io::Result<()> {
+        let handle = std::thread::spawn(move || -> std::io::Result<()> {
             writer_thread(thread_safe_writer, receiver)
         });
 
         Ok(Self {
             writer,
             chunk_store,
-            sender,
+            sender: Some(sender),
             progress_bar: progress_bar.cloned(),
             input_path: input_dir.to_path_buf(),
             placeholder_number_of_chunks_pos,
+            writer_handle: Some(handle),
         })
     }
 
-    pub fn pack(&self, files: &[PathBuf]) -> Result<u64, Box<dyn std::error::Error>> {
+    pub fn pack(&mut self, files: &[PathBuf]) -> Result<u64, Box<dyn std::error::Error>> {
         // Run process_file function concurrently
         let files_metadata: Vec<_> = files
             .par_iter()
@@ -79,7 +81,13 @@ impl ArchiveWriter {
             .map_err(|e| -> Box<dyn std::error::Error> { e.to_string().into() })?;
 
         // Close sender so writer thread can finish
-        drop(self.sender.clone());
+        if let Some(sender) = self.sender.take() {
+            drop(sender);
+        }
+
+        if let Some(handle) = self.writer_handle.take() {
+            handle.join().expect("Writer thread panicked")?;
+        }
 
         // Write number of chunks in the placeholder
         {
@@ -163,7 +171,12 @@ impl ArchiveWriter {
                     compressed_data: compressed,
                     original_size: chunk_buf.len() as u64,
                 };
-                self.sender.send(msg)?;
+                if let Some(sender) = &self.sender {
+                    sender.send(msg)?;
+                } else {
+                    // sender is None, maybe return an error or handle accordingly
+                    return Err("Sender channel is closed".into());
+                }
             }
 
             // Calculate chunk hash and store it for the file metadata

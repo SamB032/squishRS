@@ -22,6 +22,7 @@ pub fn writer_thread<W: Write + Send + 'static>(
         writer.write_all(&compressed_size.to_le_bytes())?;
         writer.write_all(&chunk_msg.compressed_data)?;
     }
+    writer.flush()?;
     Ok(())
 }
 
