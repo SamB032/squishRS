@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, Read, BufWriter, Write, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use indicatif::ProgressBar;
@@ -216,8 +216,7 @@ impl ArchiveReader {
         pb: Option<&ProgressBar>,
     ) -> Result<HashMap<ChunkHash, Vec<u8>>, Box<dyn std::error::Error>> {
         // Seek to chunk table offset
-        self.reader
-            .seek(std::io::SeekFrom::Start(self.chunk_table_offset))?;
+        self.reader.seek(std::io::SeekFrom::Start(self.chunk_table_offset))?;
 
         let mut buf8 = [0u8; 8];
         let mut chunk_map: HashMap<[u8; 32], Vec<u8>> = HashMap::new();
@@ -252,7 +251,7 @@ impl ArchiveReader {
         &mut self,
         chunk_map: &HashMap<ChunkHash, Vec<u8>>,
         output_dir: &Path,
-        progress_bar: Option<&ProgressBar>,
+        progress_bar: Option<&ProgressBar>
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Move to the file table
         self.reader.seek(SeekFrom::Start(self.file_table_offset))?;
