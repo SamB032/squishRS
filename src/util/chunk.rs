@@ -19,7 +19,7 @@ pub struct ChunkStore {
     pub primary_store: PrimaryStore,
 }
 
-type PrimaryStore = Arc<DashMap<ChunkHash, u64>>;
+type PrimaryStore = Arc<DashMap<ChunkHash, ()>>;
 type ReturnInsertChunk = Result<InsertReturn, Box<dyn std::error::Error + Send + Sync>>;
 
 /// Calculates the hash of a binary array
@@ -91,7 +91,7 @@ impl ChunkStore {
                     encoder.finish()?;
                 }
 
-                entry.insert(chunk.len() as u64);
+                entry.insert(());
 
                 Ok(InsertReturn {
                     hash,
