@@ -99,8 +99,6 @@ impl ArchiveWriter {
                 self.chunks_count_position,
                 self.chunk_store.len()
             )?;
-
-            println!("Number of chunks present: {}", self.chunk_store.len())
         }
 
         // Write metadata at the end
