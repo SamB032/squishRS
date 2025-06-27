@@ -1,3 +1,4 @@
+use dashmap::mapref::entry::Entry;
 use dashmap::DashMap;
 use sha2::{Digest, Sha256};
 use std::{io::Write, sync::Arc};
@@ -75,30 +76,29 @@ impl ChunkStore {
     ///
     /// Returns an error if compression or writing to the encoder fails.
     pub fn insert(&self, chunk: &[u8]) -> ReturnInsertChunk {
-        // Primary duplication
         let hash = hash_chunk(chunk);
-        if let Some(entry) = self.primary_store.get(&hash) {
-            return Ok(InsertReturn {
-                hash: *entry.key(),
+
+        match self.primary_store.entry(hash) {
+            Entry::Occupied(_) => Ok(InsertReturn {
+                hash,
                 compressed_data: None,
-            });
+            }),
+            Entry::Vacant(entry) => {
+                let mut compressed = Vec::new();
+                {
+                    let mut encoder = Encoder::new(&mut compressed, COMPRESSION_LEVEL)?;
+                    encoder.write_all(chunk)?;
+                    encoder.finish()?;
+                }
+
+                entry.insert(chunk.len() as u64);
+
+                Ok(InsertReturn {
+                    hash,
+                    compressed_data: Some(Arc::new(compressed)),
+                })
+            }
         }
-
-        // Compress if HashMap miss
-        let mut compressed = Vec::new();
-        {
-            let mut encoder = Encoder::new(&mut compressed, COMPRESSION_LEVEL)?;
-            encoder.write_all(chunk)?;
-            encoder.finish()?;
-        }
-
-        // Store in primary store: hash => (compressed, original length)
-        self.primary_store.insert(hash, chunk.len() as u64);
-
-        Ok(InsertReturn {
-            hash,
-            compressed_data: Some(Arc::new(compressed)),
-        })
     }
 
     /// Returns the number of entries currently stored in the `ChunkStore`.

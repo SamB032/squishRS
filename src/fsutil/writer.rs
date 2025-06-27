@@ -14,7 +14,7 @@ pub fn writer_thread<W: Write + Send + 'static>(
     mut writer: W,
     rx: Receiver<ChunkMessage>,
 ) -> std::io::Result<()> {
-    while let Ok(chunk_msg) = rx.recv() {
+    for chunk_msg in rx.iter() {
         let compressed_size = chunk_msg.compressed_data.len() as u64;
 
         writer.write_all(&chunk_msg.hash)?;

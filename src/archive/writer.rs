@@ -19,7 +19,7 @@ pub struct ArchiveWriter {
     sender: Option<Sender<ChunkMessage>>,
     progress_bar: Option<ProgressBar>,
     input_path: PathBuf,
-    placeholder_number_of_chunks_pos: u64,
+    chunks_count_position: u64,
     writer_handle: Option<std::thread::JoinHandle<std::io::Result<()>>>,
 }
 
@@ -34,12 +34,14 @@ impl ArchiveWriter {
         let writer = Arc::new(Mutex::new(BufWriter::new(output)));
 
         // Write header and timestamp
-        let placeholder_number_of_chunks_pos;
+        let chunks_count_position;
         {
             let mut guard = writer.lock().unwrap();
             write_header(&mut *guard)?;
             write_timestamp(&mut *guard)?;
-            placeholder_number_of_chunks_pos = write_placeholder_u64(&mut *guard)?;
+
+            // Write placeholder for chunk count
+            chunks_count_position = write_placeholder_u64(&mut *guard)?;
             guard.flush()?;
         }
 
@@ -58,7 +60,7 @@ impl ArchiveWriter {
             sender: Some(sender),
             progress_bar: progress_bar.cloned(),
             input_path: input_dir.to_path_buf(),
-            placeholder_number_of_chunks_pos,
+            chunks_count_position,
             writer_handle: Some(handle),
         })
     }
@@ -94,10 +96,9 @@ impl ArchiveWriter {
             let mut guard = self.writer.lock().unwrap();
             patch_u64(
                 &mut *guard,
-                self.placeholder_number_of_chunks_pos,
+                self.chunks_count_position,
                 self.chunk_store.len(),
             )?;
-            guard.flush()?;
         }
 
         // Write metadata at the end
@@ -178,7 +179,6 @@ impl ArchiveWriter {
                     return Err("Sender channel is closed".into());
                 }
             }
-
             // Calculate chunk hash and store it for the file metadata
             file_chunk_hashes.push(result.hash);
         }

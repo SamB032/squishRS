@@ -1,6 +1,7 @@
-use chrono::{DateTime, Local, TimeZone};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use chrono::{DateTime, Local, TimeZone};
 
 pub const MAGIC_VERSION: &[u8] = b"squish000101";
 
