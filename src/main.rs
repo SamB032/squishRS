@@ -23,7 +23,7 @@ fn main() {
             max_threads,
         } => {
             // Default filename.out if output is not given
-            let output = output.unwrap_or_else(|| format!("{}.squish", input));
+            let output = output.unwrap_or_else(|| format!("{input}.squish"));
 
             let files_spinner = create_listing_files_spinner("Finding Files");
 
@@ -96,7 +96,7 @@ fn main() {
                 }
             } else {
                 let output = build_list_summary_table(&summary);
-                println!("{}", output);
+                println!("{output}");
             }
         }
         Commands::Unpack { squish, output } => {

@@ -97,7 +97,7 @@ impl ArchiveWriter {
             patch_u64(
                 &mut *guard,
                 self.chunks_count_position,
-                self.chunk_store.len() as u64
+                self.chunk_store.len()
             )?;
 
             println!("Number of chunks present: {}", self.chunk_store.len())

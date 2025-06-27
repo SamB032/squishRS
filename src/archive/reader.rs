@@ -311,7 +311,7 @@ impl ArchiveReader {
                 if let Some(data) = chunk_map.get(&hash) {
                     writer.write_all(data)?;
                 } else {
-                    return Err(format!("Missing chunk for file: {}", relative_path).into());
+                    return Err(format!("Missing chunk for file: {relative_path}").into());
                 }
             }
 
