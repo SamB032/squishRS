@@ -1,5 +1,3 @@
-use std::sync::atomic::Ordering;
-use std::sync::atomic::AtomicUsize;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
@@ -23,7 +21,6 @@ pub struct ArchiveWriter {
     input_path: PathBuf,
     chunks_count_position: u64,
     writer_handle: Option<std::thread::JoinHandle<std::io::Result<()>>>,
-    sent_chunks: Arc<AtomicUsize>,
 }
 
 impl ArchiveWriter {
@@ -57,8 +54,6 @@ impl ArchiveWriter {
             writer_thread(thread_safe_writer, receiver)
         });
 
-        let sent_chunks = Arc::new(AtomicUsize::new(0));
-
         Ok(Self {
             writer,
             chunk_store,
@@ -67,7 +62,6 @@ impl ArchiveWriter {
             input_path: input_dir.to_path_buf(),
             chunks_count_position,
             writer_handle: Some(handle),
-            sent_chunks
         })
     }
 
@@ -96,8 +90,6 @@ impl ArchiveWriter {
         if let Some(handle) = self.writer_handle.take() {
             handle.join().expect("Writer thread panicked")?;
         }
-
-        println!("Total chunks sent to writer: {}", self.sent_chunks.load(Ordering::Relaxed));
 
         // Write number of chunks in the placeholder
         {
@@ -184,7 +176,6 @@ impl ArchiveWriter {
                 };
                 if let Some(sender) = &self.sender {
                     sender.send(msg)?;
-                    self.sent_chunks.fetch_add(1, Ordering::Relaxed);
                 } else {
                     // sender is None, maybe return an error or handle accordingly
                     return Err("Sender channel is closed".into());
