@@ -14,17 +14,14 @@ pub fn writer_thread<W: Write + Send + 'static>(
     mut writer: W,
     rx: Receiver<ChunkMessage>,
 ) -> std::io::Result<()> {
-    let mut count = 0;
     for chunk_msg in rx.iter() {
         let compressed_size = chunk_msg.compressed_data.len() as u64;
-        count += 1;
 
         writer.write_all(&chunk_msg.hash)?;
         writer.write_all(&chunk_msg.original_size.to_le_bytes())?;
         writer.write_all(&compressed_size.to_le_bytes())?;
         writer.write_all(&chunk_msg.compressed_data)?;
     }
-    println!("Writer thread wrote {} chunks", count);
     writer.flush()?;
     Ok(())
 }
