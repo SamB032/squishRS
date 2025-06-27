@@ -97,7 +97,7 @@ impl ArchiveWriter {
             patch_u64(
                 &mut *guard,
                 self.chunks_count_position,
-                self.chunk_store.len()
+                self.chunk_store.len(),
             )?;
         }
 

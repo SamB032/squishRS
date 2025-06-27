@@ -1,8 +1,8 @@
+use dashmap::mapref::entry::Entry;
 use dashmap::DashMap;
 use sha2::{Digest, Sha256};
 use std::{io::Write, sync::Arc};
 use zstd::stream::Encoder;
-use dashmap::mapref::entry::Entry;
 
 pub type ChunkHash = [u8; 32];
 
