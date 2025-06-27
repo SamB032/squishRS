@@ -1,3 +1,5 @@
+use std::sync::atomic::Ordering;
+use std::sync::atomic::AtomicUsize;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
@@ -19,8 +21,9 @@ pub struct ArchiveWriter {
     sender: Option<Sender<ChunkMessage>>,
     progress_bar: Option<ProgressBar>,
     input_path: PathBuf,
-    placeholder_number_of_chunks_pos: u64,
+    chunks_count_position: u64,
     writer_handle: Option<std::thread::JoinHandle<std::io::Result<()>>>,
+    sent_chunks: Arc<AtomicUsize>,
 }
 
 impl ArchiveWriter {
@@ -34,12 +37,14 @@ impl ArchiveWriter {
         let writer = Arc::new(Mutex::new(BufWriter::new(output)));
 
         // Write header and timestamp
-        let placeholder_number_of_chunks_pos;
+        let chunks_count_position;
         {
             let mut guard = writer.lock().unwrap();
             write_header(&mut *guard)?;
             write_timestamp(&mut *guard)?;
-            placeholder_number_of_chunks_pos = write_placeholder_u64(&mut *guard)?;
+
+            // Write placeholder for chunk count
+            chunks_count_position = write_placeholder_u64(&mut *guard)?;
             guard.flush()?;
         }
 
@@ -52,14 +57,17 @@ impl ArchiveWriter {
             writer_thread(thread_safe_writer, receiver)
         });
 
+        let sent_chunks = Arc::new(AtomicUsize::new(0));
+
         Ok(Self {
             writer,
             chunk_store,
             sender: Some(sender),
             progress_bar: progress_bar.cloned(),
             input_path: input_dir.to_path_buf(),
-            placeholder_number_of_chunks_pos,
+            chunks_count_position,
             writer_handle: Some(handle),
+            sent_chunks
         })
     }
 
@@ -89,15 +97,18 @@ impl ArchiveWriter {
             handle.join().expect("Writer thread panicked")?;
         }
 
+        println!("Total chunks sent to writer: {}", self.sent_chunks.load(Ordering::Relaxed));
+
         // Write number of chunks in the placeholder
         {
             let mut guard = self.writer.lock().unwrap();
             patch_u64(
                 &mut *guard,
-                self.placeholder_number_of_chunks_pos,
-                self.chunk_store.len(),
+                self.chunks_count_position,
+                self.chunk_store.len() as u64
             )?;
-            guard.flush()?;
+
+            println!("Number of chunks present: {}", self.chunk_store.len())
         }
 
         // Write metadata at the end
@@ -173,12 +184,12 @@ impl ArchiveWriter {
                 };
                 if let Some(sender) = &self.sender {
                     sender.send(msg)?;
+                    self.sent_chunks.fetch_add(1, Ordering::Relaxed);
                 } else {
                     // sender is None, maybe return an error or handle accordingly
                     return Err("Sender channel is closed".into());
                 }
             }
-
             // Calculate chunk hash and store it for the file metadata
             file_chunk_hashes.push(result.hash);
         }

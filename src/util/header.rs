@@ -1,6 +1,7 @@
-use chrono::{DateTime, Local, TimeZone};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Write, Seek, SeekFrom};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use chrono::{DateTime, Local, TimeZone};
 
 pub const MAGIC_VERSION: &[u8] = b"squish000101";
 
@@ -153,11 +154,7 @@ pub fn write_placeholder_u64<W: Write + Seek>(writer: &mut W) -> Result<u64, std
 /// ```rust
 /// patch_u64(&mut writer, pos, 1234)?;
 /// ```
-pub fn patch_u64<W: Write + Seek>(
-    writer: &mut W,
-    pos: u64,
-    value: u64,
-) -> Result<(), std::io::Error> {
+pub fn patch_u64<W: Write + Seek>(writer: &mut W, pos: u64, value: u64) -> Result<(), std::io::Error> {
     writer.seek(SeekFrom::Start(pos))?;
     writer.write_all(&value.to_le_bytes())?;
     writer.seek(SeekFrom::End(0))?;
