@@ -22,6 +22,9 @@ fn main() {
             output,
             max_threads,
         } => {
+            //Remove ending front and back slashes from input
+            let trimmed_input = input.trim_end_matches(&['/', '\\'][..]).to_string();
+
             // Default filename.out if output is not given
             let output = output.unwrap_or_else(|| format!("{input}.squish"));
 
@@ -31,7 +34,7 @@ fn main() {
             cap_max_threads(max_threads).expect("Failed to Build Rayon Thread Pool");
 
             // Count total files for progress bar
-            let files = match walk_dir(Path::new(&input)) {
+            let files = match walk_dir(Path::new(&trimmed_input)) {
                 Ok(f) => f,
                 Err(e) => {
                     eprintln!("{}: {}", "Failed to list files".red(), e);
