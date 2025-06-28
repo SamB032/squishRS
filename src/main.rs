@@ -5,7 +5,7 @@ mod util;
 
 use crate::archive::{ArchiveReader, ArchiveWriter};
 use crate::cmd::progress_bar::{create_progress_bar, create_spinner};
-use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
+use crate::cmd::{Cli, Commands, build_list_summary_table, format_bytes};
 use crate::fsutil::walk_dir;
 
 use clap::Parser;
@@ -92,7 +92,11 @@ fn main() {
                 // Make it machine readable, could be piped to fzf
                 println!(
                     "squish_size(bytes): {}, original_size(bytes): {}, reduction: {:.2}%, number_of_files: {}, chunks_count: {}",
-                    summary.archive_size, summary.total_original_size, summary.reduction_percentage, summary.files.len(), summary.unique_chunks
+                    summary.archive_size,
+                    summary.total_original_size,
+                    summary.reduction_percentage,
+                    summary.files.len(),
+                    summary.unique_chunks
                 );
 
                 println!("{:>10}  File Path", "Size (Bytes)");
