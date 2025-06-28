@@ -39,29 +39,29 @@ cargo build --release
 
 ### Pack
 ``` shell 
-squish pack ./my-folder -o archive.squish
+squishrs pack ./my-folder -o archive.squish
 ```
 
 ### List
 ``` shell
-squish list archive.squish
+squishrs list archive.squish
 ```
 
 ### Unpack
 ``` shell
-squish unpack archive.squish -o ./output-dir
+squishrs unpack archive.squish -o ./output-dir
 ```
 
 ### Help
 ``` shell
-squish --help
+squishrs --help
 ```
 
 ## 📚 Example
 ``` shell
-squish pack ./data -o data.squish
-squish list data.squish
-squish unpack data.squish -o ./restored
+squishrs pack ./data -o data.squish
+squishrs list data.squish
+squishrs unpack data.squish -o ./restored
 
 ```
 
