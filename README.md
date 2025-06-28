@@ -3,7 +3,9 @@
 > Compact, compress, and deduplicate files into a single archive format.
 
 [![Crates.io](https://img.shields.io/crates/v/squishrs.svg)](https://crates.io/crates/squishrs)
+<!--
 [![Docs.rs](https://docs.rs/squishrs/badge.svg)](https://docs.rs/squishrs)
+-->
 
 ---
 
