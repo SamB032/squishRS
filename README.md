@@ -52,6 +52,11 @@ squish list archive.squish
 squish unpack archive.squish -o ./output-dir
 ```
 
+### Help
+``` shell
+squish --help
+```
+
 ## 📚 Example
 ``` shell
 squish pack ./data -o data.squish
