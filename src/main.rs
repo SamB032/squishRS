@@ -4,7 +4,7 @@ mod fsutil;
 mod util;
 
 use crate::archive::{ArchiveReader, ArchiveWriter};
-use crate::cmd::progress_bar::{create_spinner, create_progress_bar};
+use crate::cmd::progress_bar::{create_progress_bar, create_spinner};
 use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
 use crate::fsutil::walk_dir;
 
@@ -73,7 +73,7 @@ fn main() {
         }
         Commands::List { squish, simple } => {
             let discovery_spinner = create_spinner("Scanning Squish");
-            
+
             let mut archive_reader = ArchiveReader::new(Path::new(&squish)).unwrap_or_else(|e| {
                 eprint!("{}: {}", "Failed to setup file reader".red(), e);
                 std::process::exit(1)

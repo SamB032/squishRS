@@ -4,8 +4,8 @@ use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 use indicatif::ProgressBar;
-use zstd::decode_all;
 use rayon::prelude::*;
+use zstd::decode_all;
 
 use crate::util::chunk::ChunkHash;
 use crate::util::header::{convert_timestamp_to_date, verify_header};
@@ -315,29 +315,33 @@ impl ArchiveReader {
 
         // Rebuild files in parallel
         entries
-        .par_iter()
-        .try_for_each(|entry| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-            let full_path = output_dir.join(PathBuf::from(&entry.relative_path));
-            if let Some(parent) = full_path.parent() {
-                fs::create_dir_all(parent)?;
-            }
+            .par_iter()
+            .try_for_each(
+                |entry| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+                    let full_path = output_dir.join(PathBuf::from(&entry.relative_path));
+                    if let Some(parent) = full_path.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
 
-            let mut writer = BufWriter::new(File::create(&full_path)?);
-            for hash in &entry.chunk_hashes {
-                if let Some(data) = chunk_map.get(hash) {
-                    writer.write_all(data)?;
-                } else {
-                    return Err(format!("Missing chunk for file: {}", entry.relative_path).into());
-                }
-            }
+                    let mut writer = BufWriter::new(File::create(&full_path)?);
+                    for hash in &entry.chunk_hashes {
+                        if let Some(data) = chunk_map.get(hash) {
+                            writer.write_all(data)?;
+                        } else {
+                            return Err(
+                                format!("Missing chunk for file: {}", entry.relative_path).into()
+                            );
+                        }
+                    }
 
-            if let Some(pb) = progress_bar {
-                pb.inc(1);
-            }
+                    if let Some(pb) = progress_bar {
+                        pb.inc(1);
+                    }
 
-            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
-        })
-        .map_err(|e| -> Box<dyn std::error::Error> { e.to_string().into() })?;
+                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
+                },
+            )
+            .map_err(|e| -> Box<dyn std::error::Error> { e.to_string().into() })?;
 
         Ok(())
     }

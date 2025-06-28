@@ -1,6 +1,6 @@
 use super::format_bytes;
 use crate::archive::reader::ArchiveSummary;
-use crate::{build_list_summary_table, create_spinner, create_progress_bar};
+use crate::{build_list_summary_table, create_progress_bar, create_spinner};
 
 #[test]
 fn test_create_progress_bar_basic() {
