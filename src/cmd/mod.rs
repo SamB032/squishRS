@@ -6,7 +6,7 @@ use crate::archive::reader::ArchiveSummary;
 use byte_unit::{Byte, UnitType};
 use clap::{Parser, Subcommand};
 use num_format::{Locale, ToFormattedString};
-use prettytable::{Cell, Row, Table, format::consts::FORMAT_NO_LINESEP_WITH_TITLE, row};
+use prettytable::{format::consts::FORMAT_NO_LINESEP_WITH_TITLE, row, Cell, Row, Table};
 
 #[derive(Parser)]
 #[clap(name = "squishrs")]

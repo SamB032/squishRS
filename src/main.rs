@@ -5,7 +5,7 @@ mod util;
 
 use crate::archive::{ArchiveReader, ArchiveWriter};
 use crate::cmd::progress_bar::{create_progress_bar, create_spinner};
-use crate::cmd::{Cli, Commands, build_list_summary_table, format_bytes};
+use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
 use crate::fsutil::walk_dir;
 
 use clap::Parser;

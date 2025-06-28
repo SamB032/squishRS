@@ -3,12 +3,12 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use crossbeam::channel::{Sender, unbounded};
+use crossbeam::channel::{unbounded, Sender};
 use indicatif::ProgressBar;
 use rayon::prelude::*;
 
-use crate::fsutil::writer::{ChunkMessage, ThreadSafeWriter, writer_thread};
-use crate::util::chunk::{CHUNK_SIZE, ChunkHash, ChunkStore};
+use crate::fsutil::writer::{writer_thread, ChunkMessage, ThreadSafeWriter};
+use crate::util::chunk::{ChunkHash, ChunkStore, CHUNK_SIZE};
 use crate::util::header::{patch_u64, write_header, write_placeholder_u64, write_timestamp};
 
 type PackedResult = Result<(String, u64, Vec<ChunkHash>), Box<dyn std::error::Error + Send + Sync>>;

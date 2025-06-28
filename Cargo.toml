@@ -1,8 +1,8 @@
 [package]
 name = "squishrs"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Sam Boffey sam.boffey04@gmail.com"]
-edition = "2024"
+edition = "2021"
 
 license = "MIT"
 description = "Platform independent compression tool via zstd"
