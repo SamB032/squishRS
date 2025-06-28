@@ -2,6 +2,9 @@
 
 > Compact, compress, and deduplicate files into a single archive format.
 
+[![Crates.io](https://img.shields.io/crates/v/squishrs.svg)](https://crates.io/crates/squishrs)
+[![Docs.rs](https://docs.rs/squishrs/badge.svg)](https://docs.rs/squishrs)
+
 ---
 
 ## 🧭 Table of Contents
@@ -27,9 +30,16 @@
 - Unpack files with directory preservation
 
 ## 📥 Installation
-Clone and Build locally:
+> **Note:** Ensure you have [Rust and Cargo installed](https://www.rust-lang.org/tools/install).
+
+### 📦 Via Crates
 ``` shell
-git clone https://github.com/your-username/squishRS.git
+cargo install squishrs
+```
+
+### 🔧 Clone and Build Locally:
+``` shell
+git clone https://github.com/SamB032/squishRS.git
 cd squishRS
 cargo build --release
 
@@ -69,7 +79,6 @@ squishrs unpack data.squish -o ./restored
 Run Tests:
 ``` shell
 cargo test
-
 ```
 
 Run Linter (Clippy):
