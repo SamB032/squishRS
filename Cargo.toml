@@ -1,7 +1,14 @@
 [package]
 name = "squishrs"
 version = "1.0.0"
-edition = "2021"
+authors = ["Sam Boffey sam.boffey04@gmail.com"]
+edition = "2024"
+
+license = "MIT"
+description = "Platform independent compression tool via zstd"
+repository = "https://github.com/SamB032/squishrs"
+homepage = "https://github.com/SamB032/squishrs"
+documentation = "https://docs.rs/squishrs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
