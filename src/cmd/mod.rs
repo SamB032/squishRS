@@ -17,8 +17,13 @@ pub struct Cli {
 }
 
 #[derive(Subcommand)]
+#[command(name = "squish", version, about = "A CLI tool to pack and unpack .squish archives", long_about = None)]
 pub enum Commands {
     /// Pack a directory into a .squish archive
+    #[command(
+        about = "Pack a directory",
+        long_about = "Compress and deduplicate a directory into a .squish archive file"
+    )]
     Pack {
         input: String,
         #[clap(short, long)]
@@ -28,6 +33,10 @@ pub enum Commands {
     },
 
     /// List contents of a .squish archive
+    #[command(
+        about = "List files in an archive",
+        long_about = "Display the contents of a .squish archive"
+    )]
     List {
         squish: String,
         #[arg(long, default_value_t = false)]
@@ -35,6 +44,10 @@ pub enum Commands {
     },
 
     /// Unpack files from a .squish archive
+    #[command(
+        about = "Extract archive contents",
+        long_about = "Unpacks all files from a .squish archive into a target directory"
+    )]
     Unpack {
         squish: String,
         #[clap(short, long)]

@@ -1,6 +1,6 @@
 use super::format_bytes;
 use crate::archive::reader::ArchiveSummary;
-use crate::{build_list_summary_table, create_listing_files_spinner, create_progress_bar};
+use crate::{build_list_summary_table, create_progress_bar, create_spinner};
 
 #[test]
 fn test_create_progress_bar_basic() {
@@ -18,7 +18,7 @@ fn test_create_progress_bar_basic() {
 #[test]
 fn test_create_listing_files_spinner_basic() {
     let message = "Scanning";
-    let pb = create_listing_files_spinner(message);
+    let pb = create_spinner(message);
     assert_eq!(pb.message(), message);
 
     // The spinner should tick without panicking

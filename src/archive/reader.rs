@@ -4,6 +4,7 @@ use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 use indicatif::ProgressBar;
+use rayon::prelude::*;
 use zstd::decode_all;
 
 use crate::util::chunk::ChunkHash;
@@ -31,6 +32,11 @@ pub struct ArchiveSummary {
 pub struct FileEntry {
     pub path: String,
     pub original_size: u64,
+}
+
+struct FileRebuildEntry {
+    relative_path: String,
+    chunk_hashes: Vec<ChunkHash>,
 }
 
 impl ArchiveReader {
@@ -267,6 +273,7 @@ impl ArchiveReader {
 
         let mut buf4 = [0u8; 4];
         let mut buf8 = [0u8; 8];
+        let mut entries = Vec::with_capacity(self.file_count as usize);
 
         // Setup progress bar if one is given
         if let Some(progress_bar) = progress_bar {
@@ -284,7 +291,6 @@ impl ArchiveReader {
             let mut path_bytes = vec![0u8; path_length];
             self.reader.read_exact(&mut path_bytes)?;
             let relative_path = String::from_utf8(path_bytes)?;
-            let full_path = output_dir.join(PathBuf::from(&relative_path));
 
             // Read Original Size and Disgard
             self.reader.read_exact(&mut buf8)?;
@@ -301,25 +307,41 @@ impl ArchiveReader {
                 chunks.push(hash);
             }
 
-            // Rebuilt the file
-            if let Some(parent) = full_path.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            let mut writer = BufWriter::new(File::create(&full_path)?);
-
-            for hash in chunks {
-                if let Some(data) = chunk_map.get(&hash) {
-                    writer.write_all(data)?;
-                } else {
-                    return Err(format!("Missing chunk for file: {relative_path}").into());
-                }
-            }
-
-            // Increment progress bar if it exists
-            if let Some(progress_bar) = progress_bar {
-                progress_bar.inc(1);
-            }
+            entries.push(FileRebuildEntry {
+                relative_path,
+                chunk_hashes: chunks,
+            });
         }
+
+        // Rebuild files in parallel
+        entries
+            .par_iter()
+            .try_for_each(
+                |entry| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+                    let full_path = output_dir.join(PathBuf::from(&entry.relative_path));
+                    if let Some(parent) = full_path.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+
+                    let mut writer = BufWriter::new(File::create(&full_path)?);
+                    for hash in &entry.chunk_hashes {
+                        if let Some(data) = chunk_map.get(hash) {
+                            writer.write_all(data)?;
+                        } else {
+                            return Err(
+                                format!("Missing chunk for file: {}", entry.relative_path).into()
+                            );
+                        }
+                    }
+
+                    if let Some(pb) = progress_bar {
+                        pb.inc(1);
+                    }
+
+                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
+                },
+            )
+            .map_err(|e| -> Box<dyn std::error::Error> { e.to_string().into() })?;
 
         Ok(())
     }

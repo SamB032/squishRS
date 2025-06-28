@@ -49,11 +49,11 @@ pub fn create_progress_bar(length: u64, message: &'static str) -> ProgressBar {
 /// # Example
 ///
 /// ```no_run
-/// let pb = create_listing_files_spinner("Scanning files");
+/// let pb = create_spinner("Scanning files");
 /// // Perform work...
 /// pb.finish_with_message("Done scanning files");
 /// ```
-pub fn create_listing_files_spinner(message: &'static str) -> ProgressBar {
+pub fn create_spinner(message: &'static str) -> ProgressBar {
     let pb = ProgressBar::new_spinner();
     pb.set_message(message);
     pb.enable_steady_tick(Duration::from_millis(500)); // update spinner every 500ms

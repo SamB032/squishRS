@@ -4,7 +4,7 @@ mod fsutil;
 mod util;
 
 use crate::archive::{ArchiveReader, ArchiveWriter};
-use crate::cmd::progress_bar::{create_listing_files_spinner, create_progress_bar};
+use crate::cmd::progress_bar::{create_progress_bar, create_spinner};
 use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
 use crate::fsutil::walk_dir;
 
@@ -28,7 +28,7 @@ fn main() {
             // Default filename.out if output is not given
             let output = output.unwrap_or_else(|| format!("{input}.squish"));
 
-            let files_spinner = create_listing_files_spinner("Finding Files");
+            let files_spinner = create_spinner("Finding Files");
 
             // Cap the number of threads that can spawn
             cap_max_threads(max_threads).expect("Failed to Build Rayon Thread Pool");
@@ -72,6 +72,8 @@ fn main() {
             );
         }
         Commands::List { squish, simple } => {
+            let discovery_spinner = create_spinner("Scanning Squish");
+
             let mut archive_reader = ArchiveReader::new(Path::new(&squish)).unwrap_or_else(|e| {
                 eprint!("{}: {}", "Failed to setup file reader".red(), e);
                 std::process::exit(1)
@@ -84,6 +86,7 @@ fn main() {
                     std::process::exit(1)
                 }
             };
+            discovery_spinner.finish_and_clear();
 
             if simple {
                 // Make it machine readable, could be piped to fzf
