@@ -1,4 +1,4 @@
-use crate::fsutil::walk_dir;
+use crate::fsutil::directory::walk_dir;
 use std::fs;
 use std::fs::File;
 use std::path::Path;

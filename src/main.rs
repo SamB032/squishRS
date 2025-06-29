@@ -6,10 +6,11 @@ mod util;
 use crate::archive::{ArchiveReader, ArchiveWriter};
 use crate::cmd::progress_bar::{create_progress_bar, create_spinner};
 use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
-use crate::fsutil::walk_dir;
+use crate::fsutil::directory::walk_dir;
 
 use clap::Parser;
 use colored::*;
+use indicatif::ProgressBar;
 use rayon::{ThreadPoolBuildError, ThreadPoolBuilder};
 use std::path::Path;
 
@@ -34,13 +35,9 @@ fn main() {
             cap_max_threads(max_threads).expect("Failed to Build Rayon Thread Pool");
 
             // Count total files for progress bar
-            let files = match walk_dir(Path::new(&trimmed_input)) {
-                Ok(f) => f,
-                Err(e) => {
-                    eprintln!("{}: {}", "Failed to list files".red(), e);
-                    std::process::exit(1);
-                }
-            };
+            let files = walk_dir(Path::new(&trimmed_input)).unwrap_or_else(|e| {
+                exit_with_error("Failed to list files", Some(&files_spinner), &*e)
+            });
             files_spinner.finish_and_clear();
 
             // Setup progress bar
@@ -171,4 +168,39 @@ fn cap_max_threads(max_number_of_threads: usize) -> Result<(), ThreadPoolBuildEr
     ThreadPoolBuilder::new()
         .num_threads(max_number_of_threads)
         .build_global()
+}
+
+/// Handles a fatal error by optionally finishing a progress bar, printing an error message, and exiting the program.
+///
+/// # Parameters
+/// - `msg`: A short context message describing what operation failed.
+/// - `progress_bar`: An optional reference to a `ProgressBar` that will be finished and cleared if present.
+/// - `err`: The error that caused the failure; printed alongside the context message.
+///
+/// # Behavior
+/// If a progress bar is provided, it is finished and cleared before printing the error message.
+/// The error message is printed to standard error with the context message in red.
+/// Finally, the program terminates immediately with exit code 1.
+///
+/// # Panics
+/// This function does not panic; it always terminates the program.
+///
+/// # Examples
+/// ```no_run
+/// use indicatif::ProgressBar;
+///
+/// fn example(progress_bar: Option<&ProgressBar>, err: &(dyn std::error::Error)) -> ! {
+///     exit_with_error("Failed to complete operation", progress_bar, err);
+/// }
+/// ```
+fn exit_with_error(
+    msg: &str,
+    progress_bar: Option<&ProgressBar>,
+    err: &(dyn std::error::Error),
+) -> ! {
+    if let Some(progress_bar) = progress_bar {
+        progress_bar.finish_and_clear();
+    }
+    eprintln!("{}: {}", msg.red(), err);
+    std::process::exit(1);
 }
