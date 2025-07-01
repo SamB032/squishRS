@@ -10,6 +10,9 @@ all: build
 build:
 	cargo build --release
 
+fmt:
+	cargo fmt
+
 test:
 	cargo test
 

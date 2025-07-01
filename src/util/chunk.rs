@@ -4,6 +4,8 @@ use sha2::{Digest, Sha256};
 use std::{io::Write, sync::Arc};
 use zstd::stream::Encoder;
 
+use crate::util::errors::Err;
+
 pub type ChunkHash = [u8; 32];
 
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
@@ -86,9 +88,10 @@ impl ChunkStore {
             Entry::Vacant(entry) => {
                 let mut compressed = Vec::new();
                 {
-                    let mut encoder = Encoder::new(&mut compressed, COMPRESSION_LEVEL)?;
-                    encoder.write_all(chunk)?;
-                    encoder.finish()?;
+                    let mut encoder = Encoder::new(&mut compressed, COMPRESSION_LEVEL)
+                        .map_err(Err::EncoderError)?;
+                    encoder.write_all(chunk).map_err(Err::EncoderError)?;
+                    encoder.finish().map_err(Err::EncoderError)?;
                 }
 
                 entry.insert(());
