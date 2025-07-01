@@ -91,7 +91,7 @@ impl ArchiveWriter {
         let thread_safe_writer = ThreadSafeWriter::new(Arc::clone(&writer));
         let handle = std::thread::spawn(move || -> std::io::Result<()> {
             writer_thread(thread_safe_writer, receiver)
-                .map_err(|_e| std::io::Error::new(std::io::ErrorKind::Other, "Writer Thread Failed"))
+                .map_err(|_e| std::io::Error::other("Writer Thread Failed"))
         });
 
         Ok(Self {
