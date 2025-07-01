@@ -18,6 +18,9 @@ pub enum Err {
     SenderError(Box<dyn std::error::Error + Send + Sync>),
     ChunkInsertError(std::io::Error),
     EncoderError(std::io::Error),
+    InvalidSquish(std::io::Error),
+    CreateDirError(std::io::Error),
+    CreateFileError(std::io::Error),
 }
 
 impl fmt::Display for Err {
@@ -32,6 +35,9 @@ impl fmt::Display for Err {
             Err::SenderError(_e) => write!(f, "Error sending to writer channel"),
             Err::ChunkInsertError(_e) => write!(f, "Error inserting chunk hash into Map"),
             Err::EncoderError(_e) => write!(f, "Error with zstd encoder"),
+            Err::InvalidSquish(_e) => write!(f, "Error with validating squish"),
+            Err::CreateDirError(_e) => write!(f, "Error with creating directory"),
+            Err::CreateFileError(_e) => write!(f, "Error with creating file"),
         }
     }
 }
@@ -53,6 +59,9 @@ impl Error for Err {
             Err::SenderError(e) => Some(&**e),
             Err::ChunkInsertError(e) => Some(e),
             Err::EncoderError(e) => Some(e),
+            Err::InvalidSquish(e) => Some(e),
+            Err::CreateDirError(e) => Some(e),
+            Err::CreateFileError(e) => Some(e),
         }
     }
 }

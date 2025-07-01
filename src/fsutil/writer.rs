@@ -4,6 +4,8 @@ use std::io::{BufWriter, Write};
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use crate::util::errors::{AppError, Err};
+
 pub struct ChunkMessage {
     pub hash: [u8; 32],
     pub compressed_data: Arc<Vec<u8>>,
@@ -13,16 +15,24 @@ pub struct ChunkMessage {
 pub fn writer_thread<W: Write + Send + 'static>(
     mut writer: W,
     rx: Receiver<ChunkMessage>,
-) -> std::io::Result<()> {
+) -> Result<(), AppError> {
     for chunk_msg in rx.iter() {
         let compressed_size = chunk_msg.compressed_data.len() as u64;
 
-        writer.write_all(&chunk_msg.hash)?;
-        writer.write_all(&chunk_msg.original_size.to_le_bytes())?;
-        writer.write_all(&compressed_size.to_le_bytes())?;
-        writer.write_all(&chunk_msg.compressed_data)?;
+        writer
+            .write_all(&chunk_msg.hash)
+            .map_err(Err::WriterError)?;
+        writer
+            .write_all(&chunk_msg.original_size.to_le_bytes())
+            .map_err(Err::WriterError)?;
+        writer
+            .write_all(&compressed_size.to_le_bytes())
+            .map_err(Err::WriterError)?;
+        writer
+            .write_all(&chunk_msg.compressed_data)
+            .map_err(Err::WriterError)?;
     }
-    writer.flush()?;
+    writer.flush().map_err(Err::FlushError)?;
     Ok(())
 }
 

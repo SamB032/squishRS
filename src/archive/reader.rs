@@ -8,6 +8,7 @@ use rayon::prelude::*;
 use zstd::decode_all;
 
 use crate::util::chunk::ChunkHash;
+use crate::util::errors::{AppError, Err};
 use crate::util::header::{convert_timestamp_to_date, verify_header};
 
 pub struct ArchiveReader {
@@ -40,8 +41,8 @@ struct FileRebuildEntry {
 }
 
 impl ArchiveReader {
-    pub fn new(archive_path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
-        let file = File::open(archive_path)?;
+    pub fn new(archive_path: &Path) -> Result<Self, AppError> {
+        let file = File::open(archive_path).map_err(Err::ReaderError)?;
         let mut reader = BufReader::new(file);
 
         // Get size of archive
@@ -49,7 +50,7 @@ impl ArchiveReader {
         let archive_size = metadata.len();
 
         // Check magic header
-        verify_header(&mut reader)?;
+        verify_header(&mut reader).map_err(Err::InvalidSquish)?;
 
         // Setup buffers for reading
         let mut buf8 = [0u8; 8];
@@ -60,31 +61,35 @@ impl ArchiveReader {
         let squish_creation_time = convert_timestamp_to_date(u64::from_le_bytes(buf8));
 
         // Read the number of chunks
-        reader.read_exact(&mut buf8)?;
+        reader.read_exact(&mut buf8).map_err(Err::ReaderError)?;
         let unique_chunk_count = u64::from_le_bytes(buf8);
 
-        let chunk_table_offset = reader.stream_position()?;
+        let chunk_table_offset = reader.stream_position().map_err(Err::ReaderError)?;
 
         // Skip all chunks
         for _ in 0..unique_chunk_count {
-            reader.read_exact(&mut buf32)?;
+            reader.read_exact(&mut buf32).map_err(Err::ReaderError)?;
 
-            reader.read_exact(&mut buf8)?; // original size
+            // original size
+            reader.read_exact(&mut buf8).map_err(Err::ReaderError)?;
 
-            reader.read_exact(&mut buf8)?; // compressed size
+            // compressed size
+            reader.read_exact(&mut buf8).map_err(Err::ReaderError)?;
             let compressed_size = u64::from_le_bytes(buf8);
 
             // Skip over compressed data
-            reader.seek(SeekFrom::Current(compressed_size as i64))?;
+            reader
+                .seek(SeekFrom::Current(compressed_size as i64))
+                .map_err(Err::ReaderError)?;
         }
 
         // Read number of files (u32)
         let mut buf4 = [0u8; 4];
-        reader.read_exact(&mut buf4)?;
+        reader.read_exact(&mut buf4).map_err(Err::ReaderError)?;
         let file_count = u32::from_le_bytes(buf4);
 
         // Get file table offset
-        let file_table_offset = reader.stream_position()?;
+        let file_table_offset = reader.stream_position().map_err(Err::ReaderError)?;
 
         Ok(Self {
             reader,
@@ -128,8 +133,10 @@ impl ArchiveReader {
     /// println!("Files: {}", summary.files.len());
     /// println!("Reduction: {:.2}%", summary.reduction_percentage);
     /// ```
-    pub fn get_summary(&mut self) -> Result<ArchiveSummary, Box<dyn std::error::Error>> {
-        self.reader.seek(SeekFrom::Start(self.file_table_offset))?;
+    pub fn get_summary(&mut self) -> Result<ArchiveSummary, AppError> {
+        self.reader
+            .seek(SeekFrom::Start(self.file_table_offset))
+            .map_err(Err::ReaderError)?;
 
         let mut buf4 = [0u8; 4];
         let mut buf8 = [0u8; 8];
@@ -139,25 +146,34 @@ impl ArchiveReader {
 
         for _ in 0..self.file_count {
             // Read Path length
-            self.reader.read_exact(&mut buf4)?;
+            self.reader
+                .read_exact(&mut buf4)
+                .map_err(Err::ReaderError)?;
             let path_length = u32::from_le_bytes(buf4) as usize;
 
             // Read Path
             let mut path_bytes = vec![0u8; path_length];
-            self.reader.read_exact(&mut path_bytes)?;
+            self.reader
+                .read_exact(&mut path_bytes)
+                .map_err(Err::ReaderError)?;
             let path = String::from_utf8(path_bytes)?;
 
             // Read original size
-            self.reader.read_exact(&mut buf8)?;
+            self.reader
+                .read_exact(&mut buf8)
+                .map_err(Err::ReaderError)?;
             let orig_size = u64::from_le_bytes(buf8);
             total_orig_size += orig_size;
 
             // Read number of chunks belonging to file
-            self.reader.read_exact(&mut buf4)?;
+            self.reader
+                .read_exact(&mut buf4)
+                .map_err(Err::ReaderError)?;
             let chunk_count = u32::from_le_bytes(buf4);
 
             self.reader
-                .seek(SeekFrom::Current(chunk_count as i64 * 32))?;
+                .seek(SeekFrom::Current(chunk_count as i64 * 32))
+                .map_err(Err::ReaderError)?;
 
             files.push(FileEntry {
                 path,
@@ -197,7 +213,7 @@ impl ArchiveReader {
         &mut self,
         output_dir: &Path,
         progress_bar: Option<&mut ProgressBar>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), AppError> {
         // Read chunks here
         let chunk_map = self.read_chunks(progress_bar.as_deref())?;
 
@@ -239,18 +255,28 @@ impl ArchiveReader {
         // For each chunk, decompress and insert it corresponding hash into the hashmap
         for _ in 0..self.number_of_chunks {
             let mut hash = [0u8; 32];
-            self.reader.read_exact(&mut hash)?;
+            self.reader
+                .read_exact(&mut hash)
+                .map_err(Err::ReaderError)?;
 
-            self.reader.read_exact(&mut buf8)?; // original size
+            // original size
+            self.reader
+                .read_exact(&mut buf8)
+                .map_err(Err::ReaderError)?;
             let _orig_size = u64::from_le_bytes(buf8);
 
-            self.reader.read_exact(&mut buf8)?; // compressed size
+            // compressed size
+            self.reader
+                .read_exact(&mut buf8)
+                .map_err(Err::ReaderError)?;
             let compressed_size = u64::from_le_bytes(buf8);
 
             let mut compressed_data = vec![0u8; compressed_size as usize];
-            self.reader.read_exact(&mut compressed_data)?;
+            self.reader
+                .read_exact(&mut compressed_data)
+                .map_err(Err::ReaderError)?;
 
-            let decompressed = decode_all(&compressed_data[..])?;
+            let decompressed = decode_all(&compressed_data[..]).map_err(Err::ReaderError)?;
             chunk_map.insert(hash, decompressed);
 
             // Increment progress bar if it exists
@@ -269,7 +295,9 @@ impl ArchiveReader {
         progress_bar: Option<&ProgressBar>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Move to the file table
-        self.reader.seek(SeekFrom::Start(self.file_table_offset))?;
+        self.reader
+            .seek(SeekFrom::Start(self.file_table_offset))
+            .map_err(Err::ReaderError)?;
 
         let mut buf4 = [0u8; 4];
         let mut buf8 = [0u8; 8];
@@ -284,26 +312,36 @@ impl ArchiveReader {
 
         for _ in 0..self.file_count {
             // Read Path Length
-            self.reader.read_exact(&mut buf4)?;
+            self.reader
+                .read_exact(&mut buf4)
+                .map_err(Err::ReaderError)?;
             let path_length = u32::from_le_bytes(buf4) as usize;
 
             // Get Full Path of File
             let mut path_bytes = vec![0u8; path_length];
-            self.reader.read_exact(&mut path_bytes)?;
+            self.reader
+                .read_exact(&mut path_bytes)
+                .map_err(Err::ReaderError)?;
             let relative_path = String::from_utf8(path_bytes)?;
 
             // Read Original Size and Disgard
-            self.reader.read_exact(&mut buf8)?;
+            self.reader
+                .read_exact(&mut buf8)
+                .map_err(Err::ReaderError)?;
 
             // Read Chunk Count
-            self.reader.read_exact(&mut buf4)?;
+            self.reader
+                .read_exact(&mut buf4)
+                .map_err(Err::ReaderError)?;
             let chunk_count = u32::from_le_bytes(buf4);
 
             // Read chunk hashes
             let mut chunks = Vec::with_capacity(chunk_count as usize);
             for _ in 0..chunk_count {
                 let mut hash = [0u8; 32];
-                self.reader.read_exact(&mut hash)?;
+                self.reader
+                    .read_exact(&mut hash)
+                    .map_err(Err::ReaderError)?;
                 chunks.push(hash);
             }
 
@@ -320,13 +358,14 @@ impl ArchiveReader {
                 |entry| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     let full_path = output_dir.join(PathBuf::from(&entry.relative_path));
                     if let Some(parent) = full_path.parent() {
-                        fs::create_dir_all(parent)?;
+                        fs::create_dir_all(parent).map_err(Err::CreateDirError);
                     }
 
-                    let mut writer = BufWriter::new(File::create(&full_path)?);
+                    let mut writer =
+                        BufWriter::new(File::create(&full_path).map_err(Err::CreateFileError)?);
                     for hash in &entry.chunk_hashes {
                         if let Some(data) = chunk_map.get(hash) {
-                            writer.write_all(data)?;
+                            writer.write_all(data).map_err(Err::CreateDirError)?;
                         } else {
                             return Err(
                                 format!("Missing chunk for file: {}", entry.relative_path).into()

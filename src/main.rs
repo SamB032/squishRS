@@ -70,15 +70,12 @@ fn main() {
         Commands::List { squish, simple } => {
             let discovery_spinner = create_spinner("Scanning Squish");
 
-            let mut archive_reader = ArchiveReader::new(Path::new(&squish)).unwrap_or_else(|e| {
-                exit_with_error("Failed to setup file reader", None, &*e)
-            });
+            let mut archive_reader = ArchiveReader::new(Path::new(&squish))
+                .unwrap_or_else(|e| exit_with_error("Failed to setup file reader", None, &*e));
 
             let summary = match archive_reader.get_summary() {
                 Ok(summary) => summary,
-                Err(e) => {
-                    exit_with_error("Failed to list files", None, &*e)
-                }
+                Err(e) => exit_with_error("Failed to list files", None, &*e),
             };
             discovery_spinner.finish_and_clear();
 
@@ -114,9 +111,8 @@ fn main() {
 
             let mut pb = create_progress_bar(0, "Reading Chunks");
 
-            let mut archive_reader = ArchiveReader::new(Path::new(&squish)).unwrap_or_else(|e| {
-                exit_with_error("Failed to setup file reader", Some(&pb), &*e)
-            });
+            let mut archive_reader = ArchiveReader::new(Path::new(&squish))
+                .unwrap_or_else(|e| exit_with_error("Failed to setup file reader", Some(&pb), &*e));
 
             match archive_reader.unpack(Path::new(&output), Some(&mut pb)) {
                 Ok(_) => {
@@ -128,9 +124,7 @@ fn main() {
                         output
                     );
                 }
-                Err(e) => {
-                    exit_with_error("Failed to unpack", Some(&pb), &*e)
-                }
+                Err(e) => exit_with_error("Failed to unpack", Some(&pb), &*e),
             };
         }
     }

@@ -296,7 +296,7 @@ impl ArchiveWriter {
         let file_count = files_metadata.len() as u32;
         guard
             .write_all(&file_count.to_le_bytes())
-            .map_err(Err::WriterError);
+            .map_err(Err::WriterError)?;
 
         // For each file: path length, path, original size, chunk count, chunk hashes
         for (path, orig_size, chunk_hashes) in files_metadata {
@@ -317,10 +317,10 @@ impl ArchiveWriter {
                 .map_err(Err::WriterError)?;
 
             for hash in chunk_hashes {
-                guard.write_all(hash).map_err(Err::WriterError);
+                guard.write_all(hash).map_err(Err::WriterError)?;
             }
         }
-        guard.flush()?;
+        guard.flush().map_err(Err::FlushError)?;
         Ok(())
     }
 }
