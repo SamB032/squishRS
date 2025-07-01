@@ -7,11 +7,12 @@ use crate::archive::{ArchiveReader, ArchiveWriter};
 use crate::cmd::progress_bar::{create_progress_bar, create_spinner};
 use crate::cmd::{build_list_summary_table, format_bytes, Cli, Commands};
 use crate::fsutil::directory::walk_dir;
+use crate::util::errors::AppError;
 
 use clap::Parser;
 use colored::*;
 use indicatif::ProgressBar;
-use rayon::{ThreadPoolBuildError, ThreadPoolBuilder};
+use rayon::ThreadPoolBuilder;
 use std::path::Path;
 
 fn main() {
@@ -32,7 +33,9 @@ fn main() {
             let files_spinner = create_spinner("Finding Files");
 
             // Cap the number of threads that can spawn
-            cap_max_threads(max_threads).expect("Failed to Build Rayon Thread Pool");
+            cap_max_threads(max_threads).unwrap_or_else(|e| {
+                exit_with_error("Failed to list files", Some(&files_spinner), &*e)
+            });
 
             // Count total files for progress bar
             let files = walk_dir(Path::new(&trimmed_input)).unwrap_or_else(|e| {
@@ -47,15 +50,11 @@ fn main() {
             let mut archive_writer =
                 ArchiveWriter::new(Path::new(&input), Path::new(&output), Some(&mut pb))
                     .unwrap_or_else(|e| {
-                        pb.finish_and_clear();
-                        eprintln!("{}: {e}", "Failed to create ArchiveWriter".red());
-                        std::process::exit(1);
+                        exit_with_error("Failed to Initalise squish", Some(&pb), &*e)
                     });
 
             let compressed_size = archive_writer.pack(&files).unwrap_or_else(|e| {
-                pb.finish_and_clear();
-                eprintln!("{}: {e}", "Failed to pack".red());
-                std::process::exit(1);
+                exit_with_error("Failed to compress into squish", Some(&pb), &*e)
             });
 
             pb.finish_and_clear();
@@ -143,9 +142,10 @@ fn main() {
 
 /// Configures the global Rayon thread pool to use at most `max_number_of_threads` threads.
 ///
-/// This function attempts to build and initialize the global Rayon thread pool with the
-/// specified maximum number of threads. It should be called once early in the program
-/// before any parallel computations occur.
+/// This function attempts to initialize the global Rayon thread pool with a specified maximum
+/// number of threads. It must be called **before** any parallel computations are triggered
+/// in the application. If the thread pool is already initialized, this function will return
+/// an error.
 ///
 /// # Arguments
 ///
@@ -153,21 +153,30 @@ fn main() {
 ///
 /// # Returns
 ///
-/// * `Ok(())` if the global thread pool was successfully initialized.
-/// * `Err(rayon::ThreadPoolBuildError)` if the thread pool has already been initialized or the build fails.
+/// * `Ok(())` if the thread pool was successfully initialized.
+/// * `Err(AppError)` if the thread pool was already initialized or failed to build.
+///
+/// # Errors
+///
+/// Returns an `AppError` wrapping a `rayon::ThreadPoolBuildError` if the thread pool has
+/// already been set or the configuration fails.
 ///
 /// # Examples
 ///
+/// ```no_run
+/// use squish::parallel::cap_max_threads;
+///
+/// cap_max_threads(8).expect("Failed to configure thread pool");
 /// ```
-/// cap_max_threads(8)?;
-/// ```
+///
 /// # Note
 ///
-/// This function can only be called once per process; subsequent calls will return an error.
-fn cap_max_threads(max_number_of_threads: usize) -> Result<(), ThreadPoolBuildError> {
+/// This function can only be called once per process. All subsequent attempts will return an error.
+fn cap_max_threads(max_number_of_threads: usize) -> Result<(), AppError> {
     ThreadPoolBuilder::new()
         .num_threads(max_number_of_threads)
         .build_global()
+        .map_err(|e| e.into())
 }
 
 /// Handles a fatal error by optionally finishing a progress bar, printing an error message, and exiting the program.

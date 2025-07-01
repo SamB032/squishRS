@@ -9,6 +9,7 @@ use rayon::prelude::*;
 
 use crate::fsutil::writer::{writer_thread, ChunkMessage, ThreadSafeWriter};
 use crate::util::chunk::{ChunkHash, ChunkStore, CHUNK_SIZE};
+use crate::util::errors::{AppError, Err};
 use crate::util::header::{patch_u64, write_header, write_placeholder_u64, write_timestamp};
 
 type PackedResult = Result<(String, u64, Vec<ChunkHash>), Box<dyn std::error::Error + Send + Sync>>;
@@ -24,11 +25,49 @@ pub struct ArchiveWriter {
 }
 
 impl ArchiveWriter {
+    /// Creates a new `ArchiveWriter` for packing files into an archive.
+    ///
+    /// This function initializes the archive by:
+    /// - Creating and buffering the output file,
+    /// - Writing the archive header and a timestamp,
+    /// - Reserving space for the number of chunks (to be patched later),
+    /// - Setting up a `ChunkStore` for deduplication,
+    /// - Spawning a background writer thread to handle chunk writing,
+    /// - Optionally associating a progress bar for visual feedback.
+    ///
+    /// # Arguments
+    ///
+    /// * `input_dir` - A reference to the input directory from which files will be collected.
+    /// * `output_path` - The path where the archive file will be created.
+    /// * `progress_bar` - An optional mutable reference to a `ProgressBar` (from `indicatif`) for tracking progress.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(ArchiveWriter)` - On successful initialization of the archive writer.
+    /// * `Err(AppError)` - If any I/O error occurs while creating the output file or writing initial metadata.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if:
+    /// - The output file cannot be created or written to,
+    /// - The header, timestamp, or placeholder values cannot be written or flushed,
+    /// - The writer thread cannot be started (though this is rare).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use squishrs::archive::ArchiveWriter;
+    /// use std::path::Path;
+    ///
+    /// let output = Path::new("output.squish");
+    /// let input = Path::new("./files");
+    /// let writer = ArchiveWriter::new(input, output, None)?;
+    /// ```
     pub fn new(
         input_dir: &Path,
         output_path: &Path,
         progress_bar: Option<&mut ProgressBar>,
-    ) -> std::io::Result<Self> {
+    ) -> Result<Self, AppError> {
         // Open output writer
         let output = File::create(output_path)?;
         let writer = Arc::new(Mutex::new(BufWriter::new(output)));
@@ -36,12 +75,12 @@ impl ArchiveWriter {
         // Write header and timestamp
         let chunks_count_position;
         {
-            let mut guard = writer.lock().unwrap();
-            write_header(&mut *guard)?;
-            write_timestamp(&mut *guard)?;
+            let mut guard = writer.lock().map_err(|_| Err::LockPoisoned)?;
+            write_header(&mut *guard).map_err(Err::WriterError)?;
+            write_timestamp(&mut *guard).map_err(Err::WriterError)?;
 
             // Write placeholder for chunk count
-            chunks_count_position = write_placeholder_u64(&mut *guard)?;
+            chunks_count_position = write_placeholder_u64(&mut *guard).map_err(Err::WriterError)?;
             guard.flush()?;
         }
 
@@ -65,6 +104,45 @@ impl ArchiveWriter {
         })
     }
 
+    /// Packs a list of files into the archive.
+    ///
+    /// This method takes a slice of file paths and processes each file concurrently using Rayon.
+    /// For each file, it reads and compresses its contents, sends the resulting chunks to a background writer thread,
+    /// and optionally updates a progress bar if one is enabled.
+    ///
+    /// After all files are processed, the function:
+    /// - Waits for the writer thread to finish,
+    /// - Patches the placeholder value for the total number of chunks written,
+    /// - Appends metadata for all files at the end of the archive,
+    /// - Returns the final size of the archive in bytes.
+    ///
+    /// # Arguments
+    ///
+    /// * `files` - A slice of `PathBuf` objects representing the files to be packed into the archive.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(u64)` - The total size of the resulting archive in bytes, if the operation is successful.
+    /// * `Err(Box<dyn std::error::Error>)` - If any I/O, thread join, or metadata-related error occurs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Any file fails to be read or processed,
+    /// - The writer thread fails or panics,
+    /// - File metadata cannot be written or retrieved.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use squishrs::archive::ArchiveWriter;
+    /// use std::path::PathBuf;
+    ///
+    /// let mut writer = ArchiveWriter::new("output.squish")?;
+    /// let files = vec![PathBuf::from("file1.txt"), PathBuf::from("file2.txt")];
+    /// let archive_size = writer.pack(&files)?;
+    /// println!("Archive written ({} bytes)", archive_size);
+    /// ```
     pub fn pack(&mut self, files: &[PathBuf]) -> Result<u64, Box<dyn std::error::Error>> {
         // Run process_file function concurrently
         let files_metadata: Vec<_> = files
@@ -93,7 +171,7 @@ impl ArchiveWriter {
 
         // Write number of chunks in the placeholder
         {
-            let mut guard = self.writer.lock().unwrap();
+            let mut guard = self.writer.lock().map_err(|_| Err::LockPoisoned)?;
             patch_u64(
                 &mut *guard,
                 self.chunks_count_position,
@@ -105,8 +183,8 @@ impl ArchiveWriter {
         self.write_files_metadata(&files_metadata)?;
 
         // Return archive size
-        let binding = self.writer.lock().unwrap();
-        let file = binding.get_ref();
+        let guard = self.writer.lock().map_err(|_| Err::LockPoisoned)?;
+        let file = guard.get_ref();
         let size = file.metadata()?.len();
 
         Ok(size)
@@ -157,7 +235,7 @@ impl ArchiveWriter {
 
         let mut chunk_buf = vec![0u8; CHUNK_SIZE];
         loop {
-            let bytes_read = reader.read(&mut chunk_buf)?;
+            let bytes_read = reader.read(&mut chunk_buf).map_err(Err::ReaderError)?;
             if bytes_read == 0 {
                 break;
             }
@@ -173,7 +251,9 @@ impl ArchiveWriter {
                     original_size: chunk_buf.len() as u64,
                 };
                 if let Some(sender) = &self.sender {
-                    sender.send(msg)?;
+                    sender
+                        .send(msg)
+                        .map_err(|e| Err::SenderError(Box::new(e)))?;
                 } else {
                     // sender is None, maybe return an error or handle accordingly
                     return Err("Sender channel is closed".into());
@@ -214,22 +294,30 @@ impl ArchiveWriter {
 
         // Number of files
         let file_count = files_metadata.len() as u32;
-        guard.write_all(&file_count.to_le_bytes())?;
+        guard
+            .write_all(&file_count.to_le_bytes())
+            .map_err(Err::WriterError);
 
         // For each file: path length, path, original size, chunk count, chunk hashes
         for (path, orig_size, chunk_hashes) in files_metadata {
             let path_bytes = path.as_bytes();
             let path_len = path_bytes.len() as u32;
 
-            guard.write_all(&path_len.to_le_bytes())?;
-            guard.write_all(path_bytes)?;
-            guard.write_all(&orig_size.to_le_bytes())?;
+            guard
+                .write_all(&path_len.to_le_bytes())
+                .map_err(Err::WriterError)?;
+            guard.write_all(path_bytes).map_err(Err::WriterError)?;
+            guard
+                .write_all(&orig_size.to_le_bytes())
+                .map_err(Err::WriterError)?;
 
             let chunk_count = chunk_hashes.len() as u32;
-            guard.write_all(&chunk_count.to_le_bytes())?;
+            guard
+                .write_all(&chunk_count.to_le_bytes())
+                .map_err(Err::WriterError)?;
 
             for hash in chunk_hashes {
-                guard.write_all(hash)?;
+                guard.write_all(hash).map_err(Err::WriterError);
             }
         }
         guard.flush()?;

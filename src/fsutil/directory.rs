@@ -4,12 +4,13 @@ use std::path::{Path, PathBuf};
 use rayon::iter::Either;
 use rayon::prelude::*;
 
-use crate::util::errors::{AppError, FileIOError};
+use crate::util::errors::{AppError, Err};
 
-/// Recursively walks a directory in parallel and returns a vector of all file paths found.
+/// Recursively walks a directory and returns a vector of all file paths found.
 ///
-/// This function uses an iterative breadth-first approach combined with Rayon for parallel
-/// traversal of subdirectories, improving performance on large directory trees.
+/// This function performs an iterative breadth-first traversal of the directory tree starting
+/// at the given `path`. It collects directory entries and processes them in parallel using
+/// Rayon to improve performance when traversing large directory hierarchies.
 ///
 /// # Arguments
 ///
@@ -17,14 +18,22 @@ use crate::util::errors::{AppError, FileIOError};
 ///
 /// # Returns
 ///
-/// * `io::Result<Vec<PathBuf>>` - A vector of all discovered file paths on success, or an I/O error.
+/// * `Result<Vec<PathBuf>, AppError>` - On success, returns a vector containing the paths of all
+///   files found recursively under `path`. On failure, returns a custom application error
+///   wrapping underlying I/O errors.
+///
+/// # Errors
+///
+/// Returns a `FileIOError::ReadDirError` if the root directory cannot be read, or
+/// `FileIOError::ReadEntryError` if individual directory entries cannot be accessed.
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use squish::fsutil::walk_dir;
 /// use std::path::Path;
-/// let files = walk_dir(Path::new(".")).unwrap();
+///
+/// let files = walk_dir(Path::new(".")).expect("Failed to walk directory");
 /// println!("Found {} files", files.len());
 /// ```
 pub fn walk_dir(path: &Path) -> Result<Vec<PathBuf>, AppError> {
@@ -34,9 +43,9 @@ pub fn walk_dir(path: &Path) -> Result<Vec<PathBuf>, AppError> {
     while let Some(dir) = stack.pop() {
         // Collect all Dir entries into a vector
         let entries = fs::read_dir(&dir)
-            .map_err(FileIOError::ReadDirError)?
+            .map_err(Err::ReadDirError)?
             .collect::<Result<Vec<_>, _>>()
-            .map_err(FileIOError::ReadEntryError)?;
+            .map_err(Err::ReadEntryError)?;
 
         // Process each entry concurrently
         let (dirs, regular_files): (Vec<_>, Vec<_>) = entries

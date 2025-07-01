@@ -4,25 +4,55 @@ use std::fmt;
 pub type AppError = Box<dyn Error>;
 
 #[derive(Debug)]
-pub enum FileIOError {
+/// Represents errors related to file system input/output operations.
+///
+/// This enum encapsulates errors that occur while reading directories or directory entries,
+/// wrapping the underlying `std::io::Error`.
+pub enum Err {
     ReadDirError(std::io::Error),
     ReadEntryError(std::io::Error),
+    WriterError(std::io::Error),
+    ReaderError(std::io::Error),
+    FlushError(std::io::Error),
+    LockPoisoned,
+    SenderError(Box<dyn std::error::Error + Send + Sync>),
+    ChunkInsertError(std::io::Error),
+    EncoderError(std::io::Error),
 }
 
-impl fmt::Display for FileIOError {
+impl fmt::Display for Err {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FileIOError::ReadDirError(_e) => write!(f, "Directory not found"),
-            FileIOError::ReadEntryError(_e) => write!(f, "File Entity not found"),
+            Err::ReadDirError(_e) => write!(f, "Directory not found"),
+            Err::ReadEntryError(_e) => write!(f, "File Entity not found"),
+            Err::WriterError(_e) => write!(f, "Error writing to squish"),
+            Err::ReaderError(_e) => write!(f, "Error reading to squish"),
+            Err::FlushError(_) => write!(f, "Failed to flush archive writer"),
+            Err::LockPoisoned => write!(f, "Writer mutex was poisoned"),
+            Err::SenderError(_e) => write!(f, "Error sending to writer channel"),
+            Err::ChunkInsertError(_e) => write!(f, "Error inserting chunk hash into Map"),
+            Err::EncoderError(_e) => write!(f, "Error with zstd encoder"),
         }
     }
 }
 
-impl Error for FileIOError {
+impl Error for Err {
+    /// Formats the error for user-friendly display.
+    ///
+    /// Rather than printing the full underlying I/O error, it prints a simplified message:
+    /// - `ReadDirError` results in "Directory not found"
+    /// - `ReadEntryError` results in "File Entity not found"
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            FileIOError::ReadDirError(e) => Some(e),
-            FileIOError::ReadEntryError(e) => Some(e),
+            Err::ReadDirError(e) => Some(e),
+            Err::ReadEntryError(e) => Some(e),
+            Err::WriterError(e) => Some(e),
+            Err::ReaderError(e) => Some(e),
+            Err::FlushError(e) => Some(e),
+            Err::LockPoisoned => None,
+            Err::SenderError(e) => Some(&**e),
+            Err::ChunkInsertError(e) => Some(e),
+            Err::EncoderError(e) => Some(e),
         }
     }
 }
