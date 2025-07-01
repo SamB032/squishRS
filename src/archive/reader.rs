@@ -358,7 +358,7 @@ impl ArchiveReader {
                 |entry| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     let full_path = output_dir.join(PathBuf::from(&entry.relative_path));
                     if let Some(parent) = full_path.parent() {
-                        fs::create_dir_all(parent).map_err(Err::CreateDirError);
+                        fs::create_dir_all(parent).map_err(Err::CreateDirError)?;
                     }
 
                     let mut writer =
