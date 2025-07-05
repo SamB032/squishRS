@@ -1,6 +1,6 @@
 [package]
 name = "squishrs"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["Sam Boffey sam.boffey04@gmail.com"]
 edition = "2021"
 

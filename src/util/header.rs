@@ -101,7 +101,8 @@ pub fn convert_timestamp_to_date(timestamp_sec: u64) -> String {
 /// ```
 pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
     // Allocate buffer for prefix + version (prefix + 8 bytes for "00.01.01" format)
-    let mut header = vec![0u8; PREFIX.len() + 8];
+    let expected_len = magic_version().len();
+    let mut header = vec![0u8; expected_len];
     reader.read_exact(&mut header)?;
 
     // Check prefix
@@ -151,14 +152,6 @@ pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
                 "Incompatible version... Squish version {}.{} vs Current version {}.{}",
                 header_major, header_minor, current_major, current_minor
             ),
-        ));
-    }
-
-    // Optionally check full magic version (prefix + version)
-    if header != magic_version() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "Invalid archive header... magic version mismatch",
         ));
     }
 

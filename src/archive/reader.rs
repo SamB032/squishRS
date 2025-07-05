@@ -42,7 +42,7 @@ struct FileRebuildEntry {
 
 impl ArchiveReader {
     pub fn new(archive_path: &Path) -> Result<Self, AppError> {
-        let file = File::open(archive_path).map_err(Err::ReaderError)?;
+        let file = File::open(archive_path).map_err(Err::FileNotExist)?;
         let mut reader = BufReader::new(file);
 
         // Get size of archive
