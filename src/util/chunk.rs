@@ -1,12 +1,12 @@
 use dashmap::mapref::entry::Entry;
 use dashmap::DashMap;
-use sha2::{Digest, Sha256};
+use xxhash_rust::xxh3::xxh3_128;
 use std::{io::Write, sync::Arc};
 use zstd::stream::Encoder;
 
 use crate::util::errors::Err;
 
-pub type ChunkHash = [u8; 32];
+pub type ChunkHash = [u8; 16];
 
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
 const COMPRESSION_LEVEL: i32 = 15;
@@ -32,7 +32,7 @@ type ReturnInsertChunk = Result<InsertReturn, Box<dyn std::error::Error + Send +
 ///
 /// # returns
 ///
-/// Return an array of type '[u8;32]' representing the 32 bit hash
+/// Return an array of type '[u8;16]' representing the 16 bit hash
 ///
 /// # examples
 ///
@@ -40,12 +40,8 @@ type ReturnInsertChunk = Result<InsertReturn, Box<dyn std::error::Error + Send +
 /// chunk::hash_chunk(&chunk_buf);
 /// ```
 pub fn hash_chunk(chunk: &[u8]) -> ChunkHash {
-    let mut hasher = Sha256::new();
-    hasher.update(chunk);
-    let result = hasher.finalize();
-    let mut hash_arr = [0u8; 32];
-    hash_arr.copy_from_slice(&result);
-    hash_arr
+    let hash = xxh3_128(chunk);
+    hash.to_le_bytes()
 }
 
 impl ChunkStore {

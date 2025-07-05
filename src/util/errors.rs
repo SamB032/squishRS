@@ -28,7 +28,7 @@ impl fmt::Display for Err {
             Err::ReadDirError(_e) => write!(f, "Directory not found"),
             Err::ReadEntryError(_e) => write!(f, "File Entity not found"),
             Err::WriterError(_e) => write!(f, "Error writing to squish"),
-            Err::ReaderError(_e) => write!(f, "Error reading to squish"),
+            Err::ReaderError(_e) => write!(f, "Error reading from squish"),
             Err::FlushError(_) => write!(f, "Failed to flush archive writer"),
             Err::LockPoisoned => write!(f, "Writer mutex was poisoned"),
             Err::SenderError(_e) => write!(f, "Error sending to writer channel"),

@@ -5,9 +5,10 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use crate::util::errors::{AppError, Err};
+use crate::util::chunk::ChunkHash;
 
 pub struct ChunkMessage {
-    pub hash: [u8; 32],
+    pub hash: ChunkHash,
     pub compressed_data: Arc<Vec<u8>>,
     pub original_size: u64,
 }

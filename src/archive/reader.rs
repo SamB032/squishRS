@@ -54,7 +54,7 @@ impl ArchiveReader {
 
         // Setup buffers for reading
         let mut buf8 = [0u8; 8];
-        let mut buf32 = [0u8; 32];
+        let mut buf16 = [0u8; 16];
 
         // Get creation time
         reader.read_exact(&mut buf8)?;
@@ -68,7 +68,8 @@ impl ArchiveReader {
 
         // Skip all chunks
         for _ in 0..unique_chunk_count {
-            reader.read_exact(&mut buf32).map_err(Err::ReaderError)?;
+            // Read chunk hash
+            reader.read_exact(&mut buf16).map_err(Err::ReaderError)?;
 
             // original size
             reader.read_exact(&mut buf8).map_err(Err::ReaderError)?;
@@ -172,7 +173,7 @@ impl ArchiveReader {
             let chunk_count = u32::from_le_bytes(buf4);
 
             self.reader
-                .seek(SeekFrom::Current(chunk_count as i64 * 32))
+                .seek(SeekFrom::Current(chunk_count as i64 * 16))
                 .map_err(Err::ReaderError)?;
 
             files.push(FileEntry {
@@ -226,13 +227,13 @@ impl ArchiveReader {
     /// Reads and decompresses all chunks from the archive's chunk table into memory.
     ///
     /// Seeks to the chunk table offset stored in the archive, then reads and decompresses
-    /// each chunk. Decompressed chunks are stored in a HashMap keyed by their 32-byte hash.
+    /// each chunk. Decompressed chunks are stored in a HashMap keyed by their 16-byte hash.
     ///
     /// # Arguments
     /// * `pb` - Optional progress bar for tracking chunk reading progress.
     ///
     /// # Returns
-    /// A `HashMap` where keys are chunk hashes (`[u8; 32]`) and values are decompressed chunk data (`Vec<u8>`).
+    /// A `HashMap` where keys are chunk hashes (`[u8; 16]`) and values are decompressed chunk data (`Vec<u8>`).
     ///
     /// # Errors
     /// Returns an error if any IO operation or decompression fails.
@@ -245,7 +246,7 @@ impl ArchiveReader {
             .seek(std::io::SeekFrom::Start(self.chunk_table_offset))?;
 
         let mut buf8 = [0u8; 8];
-        let mut chunk_map: HashMap<[u8; 32], Vec<u8>> = HashMap::new();
+        let mut chunk_map: HashMap<ChunkHash, Vec<u8>> = HashMap::new();
 
         // Setup progress bar if one is given
         if let Some(progress_bar) = progress_bar {
@@ -254,7 +255,7 @@ impl ArchiveReader {
 
         // For each chunk, decompress and insert it corresponding hash into the hashmap
         for _ in 0..self.number_of_chunks {
-            let mut hash = [0u8; 32];
+            let mut hash = [0u8; 16];
             self.reader
                 .read_exact(&mut hash)
                 .map_err(Err::ReaderError)?;
@@ -338,7 +339,7 @@ impl ArchiveReader {
             // Read chunk hashes
             let mut chunks = Vec::with_capacity(chunk_count as usize);
             for _ in 0..chunk_count {
-                let mut hash = [0u8; 32];
+                let mut hash = [0u8; 16];
                 self.reader
                     .read_exact(&mut hash)
                     .map_err(Err::ReaderError)?;

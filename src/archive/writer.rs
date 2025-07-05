@@ -203,7 +203,7 @@ impl ArchiveWriter {
     /// On success, returns a tuple containing:
     /// - The file path relative to the configured input directory as a `String`.
     /// - The original uncompressed size of the file as a `u64`.
-    /// - A `Vec` of 32-byte chunk hashes (`[u8; 32]`) representing the chunks of the file.
+    /// - A `Vec` of 16-byte chunk hashes (`[u8; 16]`) representing the chunks of the file.
     ///
     /// # Errors
     ///
@@ -276,10 +276,10 @@ impl ArchiveWriter {
     ///    - Path bytes (UTF-8)
     ///    - Original file size (`u64`, little-endian)
     ///    - Number of chunks for this file (`u32`, little-endian)
-    ///    - Each 32-byte chunk hash
+    ///    - Each 16-byte chunk hash
     ///
     /// # Arguments
-    /// * `files_metadata` – Slice of `(String, u64, Vec<[u8; 32]>)` tuples containing:
+    /// * `files_metadata` – Slice of `(String, u64, Vec<[u8; 16]>)` tuples containing:
     ///     1. File’s relative path
     ///     2. Original file size
     ///     3. Vector of chunk hashes
