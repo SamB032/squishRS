@@ -50,7 +50,7 @@ impl ArchiveReader {
         let archive_size = metadata.len();
 
         // Check magic header
-        verify_header(&mut reader).map_err(Err::InvalidSquish)?;
+        verify_header(&mut reader)?;
 
         // Setup buffers for reading
         let mut buf8 = [0u8; 8];
@@ -68,6 +68,7 @@ impl ArchiveReader {
 
         // Skip all chunks
         for _ in 0..unique_chunk_count {
+            // Read
             reader.read_exact(&mut buf32).map_err(Err::ReaderError)?;
 
             // original size

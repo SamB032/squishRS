@@ -15,6 +15,8 @@ use indicatif::ProgressBar;
 use rayon::ThreadPoolBuilder;
 use std::path::Path;
 
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn main() {
     let cli = Cli::parse();
 
