@@ -58,7 +58,7 @@ impl Error for Err {
             Err::EncoderError(e) => Some(e),
             Err::CreateDirError(e) => Some(e),
             Err::CreateFileError(e) => Some(e),
-            Err::FileNotExist(e) => Some(e)
+            Err::FileNotExist(e) => Some(e),
         }
     }
 }

@@ -135,9 +135,7 @@ pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
     // Parse major and minor from current VERSION
     let current_parts: Vec<&str> = VERSION.split('.').collect();
     if current_parts.len() < 2 {
-        return Err(std::io::Error::other(
-            "Current version is malformed"
-        ));
+        return Err(std::io::Error::other("Current version is malformed"));
     }
     let current_major = current_parts[0];
     let current_minor = current_parts[1];
