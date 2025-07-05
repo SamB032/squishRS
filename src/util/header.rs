@@ -3,7 +3,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, Local, TimeZone};
 
-pub const MAGIC_VERSION: &[u8] = b"squish000101";
+use crate::VERSION;
+
+const PREFIX: &[u8] = b"squish";
+
+pub fn magic_version() -> Vec<u8> {
+    [PREFIX, VERSION.as_bytes()].concat()
+}
 
 /// Write the header to a archive file
 ///
@@ -21,7 +27,8 @@ pub const MAGIC_VERSION: &[u8] = b"squish000101";
 /// chunk::write_header(&mut writer);
 /// ```
 pub fn write_header<W: Write>(writer: &mut W) -> std::io::Result<()> {
-    writer.write_all(MAGIC_VERSION)
+    let magic_version = magic_version();
+    writer.write_all(&magic_version)
 }
 
 /// Writes the current system time as a little-endian
@@ -93,17 +100,57 @@ pub fn convert_timestamp_to_date(timestamp_sec: u64) -> String {
 /// chunk::verify_header(&mut writer);
 /// ```
 pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
-    let mut header = vec![0u8; 12];
+    // Allocate buffer for prefix + version (prefix + 8 bytes for "00.01.01" format)
+    let expected_len = magic_version().len();
+    let mut header = vec![0u8; expected_len];
     reader.read_exact(&mut header)?;
 
-    if header != MAGIC_VERSION {
-        Err(std::io::Error::new(
+    // Check prefix
+    if !header.starts_with(PREFIX) {
+        return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            "Invalid archive header",
-        ))
-    } else {
-        Ok(())
+            "Invalid archive header: prefix mismatch",
+        ));
     }
+
+    // Extract version bytes after prefix
+    let version_bytes = &header[PREFIX.len()..];
+    let version_str = std::str::from_utf8(version_bytes).map_err(|_| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Invalid UTF-8 in version string",
+        )
+    })?;
+
+    // Parse major and minor from header version
+    let header_parts: Vec<&str> = version_str.split('.').collect();
+    if header_parts.len() < 2 {
+        return Err(std::io::Error::other(
+            "Invalid version format in archive header",
+        ));
+    }
+    let header_major = header_parts[0];
+    let header_minor = header_parts[1];
+
+    // Parse major and minor from current VERSION
+    let current_parts: Vec<&str> = VERSION.split('.').collect();
+    if current_parts.len() < 2 {
+        return Err(std::io::Error::other("Current version is malformed"));
+    }
+    let current_major = current_parts[0];
+    let current_minor = current_parts[1];
+
+    // Compare major and minor versions
+    if header_major != current_major || header_minor != current_minor {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!(
+                "Incompatible version... Squish version {header_major}.{header_minor} vs Current version {current_major}.{current_minor}",
+            ),
+        ));
+    }
+
+    Ok(())
 }
 
 /// Writes a placeholder `u64` (8 zero bytes) to the writer and returns its stream position.

@@ -17,9 +17,9 @@ pub enum Err {
     LockPoisoned,
     SenderError(Box<dyn std::error::Error + Send + Sync>),
     EncoderError(std::io::Error),
-    InvalidSquish(std::io::Error),
     CreateDirError(std::io::Error),
     CreateFileError(std::io::Error),
+    FileNotExist(std::io::Error),
 }
 
 impl fmt::Display for Err {
@@ -33,9 +33,9 @@ impl fmt::Display for Err {
             Err::LockPoisoned => write!(f, "Writer mutex was poisoned"),
             Err::SenderError(_e) => write!(f, "Error sending to writer channel"),
             Err::EncoderError(_e) => write!(f, "Error with zstd encoder"),
-            Err::InvalidSquish(_e) => write!(f, "Error with validating squish"),
             Err::CreateDirError(_e) => write!(f, "Error with creating directory"),
             Err::CreateFileError(_e) => write!(f, "Error with creating file"),
+            Err::FileNotExist(_e) => write!(f, "Specified file does not exist"),
         }
     }
 }
@@ -56,9 +56,9 @@ impl Error for Err {
             Err::LockPoisoned => None,
             Err::SenderError(e) => Some(&**e),
             Err::EncoderError(e) => Some(e),
-            Err::InvalidSquish(e) => Some(e),
             Err::CreateDirError(e) => Some(e),
             Err::CreateFileError(e) => Some(e),
+            Err::FileNotExist(e) => Some(e),
         }
     }
 }
