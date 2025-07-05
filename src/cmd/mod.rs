@@ -12,6 +12,10 @@ use prettytable::{format::consts::FORMAT_NO_LINESEP_WITH_TITLE, row, Cell, Row, 
 #[clap(name = "squishrs")]
 #[clap(about = "Compact, compress, and deduplicate files into a single archive")]
 pub struct Cli {
+    /// Maximum number of threads to use
+    #[arg(long = "max-threads", short = 'j', default_value_t = 30, global = true)]
+    pub max_threads: usize,
+
     #[clap(subcommand)]
     pub command: Commands,
 }
@@ -28,8 +32,6 @@ pub enum Commands {
         input: String,
         #[clap(short, long)]
         output: Option<String>,
-        #[clap(long = "max-threads", short = 'j', default_value_t = 30)]
-        max_threads: usize,
     },
 
     /// List contents of a .squish archive

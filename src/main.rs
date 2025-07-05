@@ -20,12 +20,12 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 fn main() {
     let cli = Cli::parse();
 
+    // Cap the number of threads globally that can spawn
+    cap_max_threads(cli.max_threads)
+        .unwrap_or_else(|e| exit_with_error("Failed to list files", None, &*e));
+
     match cli.command {
-        Commands::Pack {
-            input,
-            output,
-            max_threads,
-        } => {
+        Commands::Pack { input, output } => {
             //Remove ending front and back slashes from input
             let trimmed_input = input.trim_end_matches(&['/', '\\'][..]).to_string();
 
@@ -33,11 +33,6 @@ fn main() {
             let output = output.unwrap_or_else(|| format!("{input}.squish"));
 
             let files_spinner = create_spinner("Finding Files");
-
-            // Cap the number of threads that can spawn
-            cap_max_threads(max_threads).unwrap_or_else(|e| {
-                exit_with_error("Failed to list files", Some(&files_spinner), &*e)
-            });
 
             // Count total files for progress bar
             let files = walk_dir(Path::new(&trimmed_input)).unwrap_or_else(|e| {
