@@ -145,8 +145,7 @@ pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             format!(
-                "Incompatible version... Squish version {}.{} vs Current version {}.{}",
-                header_major, header_minor, current_major, current_minor
+                "Incompatible version... Squish version {header_major}.{header_minor} vs Current version {current_major}.{current_minor}",
             ),
         ));
     }
