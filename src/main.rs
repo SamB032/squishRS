@@ -21,15 +21,11 @@ fn main() {
     let cli = Cli::parse();
 
     // Cap the number of threads globally that can spawn
-    cap_max_threads(cli.max_threads).unwrap_or_else(|e| {
-        exit_with_error("Failed to list files", None, &*e)
-    });
+    cap_max_threads(cli.max_threads)
+        .unwrap_or_else(|e| exit_with_error("Failed to list files", None, &*e));
 
     match cli.command {
-        Commands::Pack {
-            input,
-            output,
-        } => {
+        Commands::Pack { input, output } => {
             //Remove ending front and back slashes from input
             let trimmed_input = input.trim_end_matches(&['/', '\\'][..]).to_string();
 

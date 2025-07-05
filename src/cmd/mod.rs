@@ -32,7 +32,6 @@ pub enum Commands {
         input: String,
         #[clap(short, long)]
         output: Option<String>,
-
     },
 
     /// List contents of a .squish archive
