@@ -1,7 +1,7 @@
 use dashmap::mapref::entry::Entry;
 use dashmap::DashMap;
-use xxhash_rust::xxh3::xxh3_128;
 use std::{io::Write, sync::Arc};
+use xxhash_rust::xxh3::xxh3_128;
 use zstd::stream::Encoder;
 
 use crate::util::errors::Err;

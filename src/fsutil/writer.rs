@@ -4,8 +4,8 @@ use std::io::{BufWriter, Write};
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use crate::util::errors::{AppError, Err};
 use crate::util::chunk::ChunkHash;
+use crate::util::errors::{AppError, Err};
 
 pub struct ChunkMessage {
     pub hash: ChunkHash,
