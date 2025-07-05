@@ -125,8 +125,7 @@ pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
     // Parse major and minor from header version
     let header_parts: Vec<&str> = version_str.split('.').collect();
     if header_parts.len() < 2 {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
+        return Err(std::io::Error::other(
             "Invalid version format in archive header",
         ));
     }
@@ -136,9 +135,8 @@ pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
     // Parse major and minor from current VERSION
     let current_parts: Vec<&str> = VERSION.split('.').collect();
     if current_parts.len() < 2 {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Current version is malformed",
+        return Err(std::io::Error::other(
+            "Current version is malformed"
         ));
     }
     let current_major = current_parts[0];
