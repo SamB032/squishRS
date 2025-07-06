@@ -93,6 +93,7 @@ pub fn build_list_summary_table(summary: &ArchiveSummary) -> String {
     summary_table.set_titles(Row::new(vec![Cell::new("Squash Summary").with_hspan(2)]));
 
     summary_table.add_row(row!["Creation Date (UTC)", summary.squish_creation_date]);
+    summary_table.add_row(row!["Squish Version", summary.squish_version]);
     summary_table.add_row(row!["Compressed size", format_bytes(summary.archive_size)]);
     summary_table.add_row(row![
         "Original size",

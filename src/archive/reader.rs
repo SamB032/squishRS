@@ -16,6 +16,7 @@ pub struct ArchiveReader {
     archive_size: u64,
     squish_creation_time: String,
     number_of_chunks: u64,
+    squish_version: String,
     file_count: u32,
     chunk_table_offset: u64,
     file_table_offset: u64,
@@ -27,6 +28,7 @@ pub struct ArchiveSummary {
     pub archive_size: u64,
     pub reduction_percentage: f64,
     pub squish_creation_date: String,
+    pub squish_version: String,
     pub files: Vec<FileEntry>,
 }
 
@@ -50,7 +52,7 @@ impl ArchiveReader {
         let archive_size = metadata.len();
 
         // Check magic header
-        verify_header(&mut reader)?;
+        let squish_version = verify_header(&mut reader)?;
 
         // Setup buffers for reading
         let mut buf8 = [0u8; 8];
@@ -100,6 +102,7 @@ impl ArchiveReader {
             file_count,
             chunk_table_offset,
             file_table_offset,
+            squish_version,
         })
     }
 
@@ -195,6 +198,7 @@ impl ArchiveReader {
             archive_size: self.archive_size,
             reduction_percentage,
             squish_creation_date: self.squish_creation_time.clone(),
+            squish_version: self.squish_version.clone(),
             files,
         })
     }

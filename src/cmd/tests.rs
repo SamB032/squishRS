@@ -42,6 +42,7 @@ fn test_build_list_summary_table() {
         archive_size: 20,
         reduction_percentage: 80.0,
         squish_creation_date: "DATE".to_string(),
+        squish_version: "1.0.1".to_string(),
         files: Vec::new(),
     };
     let output = build_list_summary_table(&summary);
