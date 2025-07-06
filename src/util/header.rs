@@ -99,7 +99,7 @@ pub fn convert_timestamp_to_date(timestamp_sec: u64) -> String {
 /// ```
 /// chunk::verify_header(&mut writer);
 /// ```
-pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
+pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<String> {
     // Allocate buffer for prefix + version (prefix + 8 bytes for "00.01.01" format)
     let expected_len = magic_version().len();
     let mut header = vec![0u8; expected_len];
@@ -150,7 +150,7 @@ pub fn verify_header<R: Read>(reader: &mut R) -> std::io::Result<()> {
         ));
     }
 
-    Ok(())
+    Ok(version_str.to_string())
 }
 
 /// Writes a placeholder `u64` (8 zero bytes) to the writer and returns its stream position.
