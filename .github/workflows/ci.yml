@@ -1,26 +1,19 @@
 name: Rust CI
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: [push, pull_request]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
+
     name: Build and Test
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1.13
-        with:
-          toolchain: stable
-          components: clippy, rustfmt
-          cache: true
 
       - name: Build
         run: cargo build --verbose
@@ -33,10 +26,15 @@ jobs:
 
       - name: Run tests
         run: |
-          cargo install cargo-tarpaulin
-           cargo tarpaulin \
+          cargo install cargo-tarpaulin --locked
+          cargo tarpaulin \
             --all-features \
-            --verbose \
             --timeout 120 \
             --out Html
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: tarpaulin-report.html
 
