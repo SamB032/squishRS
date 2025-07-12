@@ -21,8 +21,8 @@ jobs:
 
       - name: Install rustup components
         run: |
-          rustup component add clippy --toolchain stable
-          rustup component add rustfmt --toolchain stable
+          rustup component add clippy --toolchain nightly
+          rustup component add rustfmt --toolchain nightly
 
       - name: Build
         run: cargo build --verbose
