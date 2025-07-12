@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use rayon::iter::Either;
 use rayon::prelude::*;
 
-use crate::util::errors::{AppError, Err};
+use crate::util::errors::{AppError, CustomErr};
 
 /// Recursively walks a directory and returns a vector of all file paths found.
 ///
@@ -43,9 +43,9 @@ pub fn walk_dir(path: &Path) -> Result<Vec<PathBuf>, AppError> {
     while let Some(dir) = stack.pop() {
         // Collect all Dir entries into a vector
         let entries = fs::read_dir(&dir)
-            .map_err(Err::ReadDirError)?
+            .map_err(CustomErr::ReadDirError)?
             .collect::<Result<Vec<_>, _>>()
-            .map_err(Err::ReadEntryError)?;
+            .map_err(CustomErr::ReadEntryError)?;
 
         // Process each entry concurrently
         let (dirs, regular_files): (Vec<_>, Vec<_>) = entries

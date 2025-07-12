@@ -1,7 +1,9 @@
-use crate::fsutil::directory::walk_dir;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
+
+use crate::fsutil::directory::walk_dir;
+
 use tempfile::tempdir;
 
 #[test]

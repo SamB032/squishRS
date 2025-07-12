@@ -192,7 +192,7 @@ fn cap_max_threads(max_number_of_threads: usize) -> Result<(), AppError> {
 fn exit_with_error(
     msg: &str,
     progress_bar: Option<&ProgressBar>,
-    err: &(dyn std::error::Error),
+    err: &dyn std::error::Error,
 ) -> ! {
     if let Some(progress_bar) = progress_bar {
         progress_bar.finish_and_clear();
