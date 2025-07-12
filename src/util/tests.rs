@@ -1,16 +1,11 @@
-use std::io::{Cursor, Seek, Read};
+use std::io::{Cursor, Read, Seek};
 
-use crate::VERSION;
+use crate::util::chunk::{hash_chunk, ChunkStore};
 use crate::util::header::{
-    PREFIX,
-    magic_version,
-    write_header,
-    verify_header,
-    write_timestamp,
-    convert_timestamp_to_date,
-    patch_u64,
-    write_placeholder_u64
+    convert_timestamp_to_date, magic_version, patch_u64, verify_header, write_header,
+    write_placeholder_u64, write_timestamp, PREFIX,
 };
+use crate::VERSION;
 
 #[test]
 fn test_magic_version() {
@@ -89,4 +84,84 @@ fn test_write_and_patch_placeholder_u64() {
     // Ensure writer position is at end
     let end_pos = cursor.stream_position().unwrap();
     assert_eq!(end_pos, 8);
+}
+
+#[test]
+fn test_hash_chunk_is_consistent() {
+    let data = b"some test data";
+    let hash1 = hash_chunk(data);
+    let hash2 = hash_chunk(data);
+    assert_eq!(hash1, hash2, "Hashes should be consistent for same input");
+}
+
+#[test]
+fn test_hash_chunk_different_inputs_produce_different_hashes() {
+    let hash1 = hash_chunk(b"data 1");
+    let hash2 = hash_chunk(b"data 2");
+    assert_ne!(
+        hash1, hash2,
+        "Different inputs should produce different hashes"
+    );
+}
+
+#[test]
+fn test_insert_first_time_returns_compressed_data() {
+    let store = ChunkStore::new();
+    let data = vec![1u8; 1024]; // small data for fast compression
+
+    let result = store.insert(&data).expect("Insert failed");
+    assert_eq!(result.hash, hash_chunk(&data));
+    assert!(result.compressed_data.is_some());
+    assert_eq!(store.len(), 1);
+}
+
+#[test]
+fn test_insert_duplicate_returns_none_compressed_data() {
+    let store = ChunkStore::new();
+    let data = vec![2u8; 1024];
+
+    let first = store.insert(&data).unwrap();
+    assert!(first.compressed_data.is_some());
+
+    let second = store.insert(&data).unwrap();
+    assert!(second.compressed_data.is_none());
+    assert_eq!(first.hash, second.hash);
+    assert_eq!(store.len(), 1);
+}
+
+#[test]
+fn test_multiple_unique_inserts_increase_len() {
+    let store = ChunkStore::new();
+
+    let chunk1 = vec![1u8; 1024];
+    let chunk2 = vec![2u8; 1024];
+    let chunk3 = vec![3u8; 1024];
+
+    store.insert(&chunk1).unwrap();
+    store.insert(&chunk2).unwrap();
+    store.insert(&chunk3).unwrap();
+
+    assert_eq!(store.len(), 3);
+}
+
+#[test]
+fn test_compressed_data_is_smaller_or_equal() {
+    let store = ChunkStore::new();
+    let repetitive_data = vec![42u8; 2048]; // highly compressible
+
+    let result = store.insert(&repetitive_data).unwrap();
+    assert!(result.compressed_data.is_some());
+
+    let compressed = result.compressed_data.unwrap();
+    assert!(
+        compressed.len() < repetitive_data.len(),
+        "Compressed data should be smaller than original"
+    );
+
+    // Also test it can be decompressed properly
+    let mut decoder = zstd::stream::Decoder::new(&compressed[..]).unwrap();
+    let mut decompressed = Vec::new();
+    decoder.read_to_end(&mut decompressed).unwrap();
+
+    assert_eq!(decompressed, repetitive_data);
 }
