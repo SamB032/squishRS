@@ -1,20 +1,45 @@
 # Project metadata
-VERSION := 1.0.0
-TAG := v$(VERSION)
 CRATE_NAME := squishrs
+CARGO := cargo
+TARGET := target/release/$(CRATE_NAME)
 
-.PHONY: all build test clean
+# Default target
+.PHONY: all
+all: build ## Build the release binary
 
-all: build
+.PHONY: build
+build: # Build binary
+	$(CARGO) build --release
 
-build:
-	cargo build --release
+.PHONY: run
+run: # Run target file
+	$(TARGET) $(ARGS)
 
-fmt:
-	cargo fmt
+.PHONY: test
+test: ## Run tests
+	$(CARGO) test
 
-test:
-	cargo test
+.PHONY: fmt
+fmt: ## Format code with rustfmt
+	$(CARGO) fmt
 
-clean:
-	cargo clean
+.PHONY: lint
+lint: ## Run clippy linter
+	$(CARGO) clippy --all-targets --all-features -- -D warnings
+
+.PHONY: check
+check: ## Run basic type-checking
+	$(CARGO) check
+
+.PHONY: clean
+clean: ## Clean build artifacts
+	$(CARGO) clean
+
+.PHONY: install
+install: ## Install the binary system-wide
+	$(CARGO) install --path .
+
+.PHONY: help
+help: ## Show help for each target
+	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
