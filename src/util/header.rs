@@ -5,7 +5,7 @@ use chrono::{DateTime, Local, TimeZone};
 
 use crate::VERSION;
 
-const PREFIX: &[u8] = b"squish";
+pub const PREFIX: &[u8] = b"squish";
 
 pub fn magic_version() -> Vec<u8> {
     [PREFIX, VERSION.as_bytes()].concat()
