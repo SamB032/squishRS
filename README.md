@@ -78,19 +78,19 @@ squishrs unpack data.squish -o ./restored
 ```
 
 ## 🛠 Development
-Run Tests:
-``` shell
-cargo test
+Run commonly used commands from the provided `Makefile`:
 ```
-
-Run Linter (Clippy):
-``` shell
-cargo clippy --all-targets --all-features -- -D warnings
-```
-
-Run Formatter:
-``` shell
-cargo fmt
+> make help
+all             Build the release binary
+build           Build binary
+run             Run target file with arguments
+test            Run tests
+fmt             Format code with rustfmt
+lint            Run clippy linter
+check           Run basic type-checking
+clean           Clean build artifacts
+install         Install the binary system-wide
+help            Show help for each target
 ```
 
 ## 🔬 Internals
