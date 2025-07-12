@@ -63,7 +63,9 @@ impl ArchiveReader {
         let squish_creation_time = convert_timestamp_to_date(u64::from_le_bytes(buf8));
 
         // Read the number of chunks
-        reader.read_exact(&mut buf8).map_err(CustomErr::ReaderError)?;
+        reader
+            .read_exact(&mut buf8)
+            .map_err(CustomErr::ReaderError)?;
         let unique_chunk_count = u64::from_le_bytes(buf8);
 
         let chunk_table_offset = reader.stream_position().map_err(CustomErr::ReaderError)?;
@@ -71,13 +73,19 @@ impl ArchiveReader {
         // Skip all chunks
         for _ in 0..unique_chunk_count {
             // Read chunk hash
-            reader.read_exact(&mut buf16).map_err(CustomErr::ReaderError)?;
+            reader
+                .read_exact(&mut buf16)
+                .map_err(CustomErr::ReaderError)?;
 
             // original size
-            reader.read_exact(&mut buf8).map_err(CustomErr::ReaderError)?;
+            reader
+                .read_exact(&mut buf8)
+                .map_err(CustomErr::ReaderError)?;
 
             // compressed size
-            reader.read_exact(&mut buf8).map_err(CustomErr::ReaderError)?;
+            reader
+                .read_exact(&mut buf8)
+                .map_err(CustomErr::ReaderError)?;
             let compressed_size = u64::from_le_bytes(buf8);
 
             // Skip over compressed data
@@ -88,7 +96,9 @@ impl ArchiveReader {
 
         // Read number of files (u32)
         let mut buf4 = [0u8; 4];
-        reader.read_exact(&mut buf4).map_err(CustomErr::ReaderError)?;
+        reader
+            .read_exact(&mut buf4)
+            .map_err(CustomErr::ReaderError)?;
         let file_count = u32::from_le_bytes(buf4);
 
         // Get file table offset
@@ -366,8 +376,9 @@ impl ArchiveReader {
                         fs::create_dir_all(parent).map_err(CustomErr::CreateDirError)?;
                     }
 
-                    let mut writer =
-                        BufWriter::new(File::create(&full_path).map_err(CustomErr::CreateFileError)?);
+                    let mut writer = BufWriter::new(
+                        File::create(&full_path).map_err(CustomErr::CreateFileError)?,
+                    );
                     for hash in &entry.chunk_hashes {
                         if let Some(data) = chunk_map.get(hash) {
                             writer.write_all(data).map_err(CustomErr::CreateDirError)?;

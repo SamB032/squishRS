@@ -80,7 +80,8 @@ impl ArchiveWriter {
             write_timestamp(&mut *guard).map_err(CustomErr::WriterError)?;
 
             // Write placeholder for chunk count
-            chunks_count_position = write_placeholder_u64(&mut *guard).map_err(CustomErr::WriterError)?;
+            chunks_count_position =
+                write_placeholder_u64(&mut *guard).map_err(CustomErr::WriterError)?;
             guard.flush()?;
         }
 
@@ -236,7 +237,9 @@ impl ArchiveWriter {
 
         let mut chunk_buf = vec![0u8; CHUNK_SIZE];
         loop {
-            let bytes_read = reader.read(&mut chunk_buf).map_err(CustomErr::ReaderError)?;
+            let bytes_read = reader
+                .read(&mut chunk_buf)
+                .map_err(CustomErr::ReaderError)?;
             if bytes_read == 0 {
                 break;
             }
@@ -307,7 +310,9 @@ impl ArchiveWriter {
             guard
                 .write_all(&path_len.to_le_bytes())
                 .map_err(CustomErr::WriterError)?;
-            guard.write_all(path_bytes).map_err(CustomErr::WriterError)?;
+            guard
+                .write_all(path_bytes)
+                .map_err(CustomErr::WriterError)?;
             guard
                 .write_all(&orig_size.to_le_bytes())
                 .map_err(CustomErr::WriterError)?;
