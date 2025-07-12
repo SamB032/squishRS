@@ -25,7 +25,7 @@ jobs:
           rustup component add rustfmt --toolchain nightly
 
       - name: Build
-        run: cargo build --verbose
+        run: cargo build
 
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
@@ -34,12 +34,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run tests
-        run: |
-          cargo install cargo-tarpaulin --locked
-          cargo tarpaulin \
-            --all-features \
-            --timeout 120 \
-            --out Html
+        run: cargo +nightly tarpaulin --all-features --timeout 120 --out HTML
 
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v4
