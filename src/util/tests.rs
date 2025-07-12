@@ -185,7 +185,7 @@ fn test_display_messages() {
     ];
 
     for (error, expected_msg) in cases {
-        assert_eq!(format!("{}", error), expected_msg);
+        assert_eq!(error.to_string(), expected_msg);
     }
 }
 
