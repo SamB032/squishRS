@@ -3,16 +3,15 @@ CRATE_NAME := squishrs
 CARGO := cargo
 TARGET := target/release/$(CRATE_NAME)
 
-# Default target
 .PHONY: all
 all: build ## Build the release binary
 
 .PHONY: build
-build: # Build binary
+build: ## Build binary
 	$(CARGO) build --release
 
 .PHONY: run
-run: # Run target file
+run: ## Run target file
 	$(TARGET) $(ARGS)
 
 .PHONY: test
