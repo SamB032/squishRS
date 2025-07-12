@@ -9,7 +9,7 @@ use rayon::prelude::*;
 
 use crate::fsutil::writer::{writer_thread, ChunkMessage, ThreadSafeWriter};
 use crate::util::chunk::{ChunkHash, ChunkStore, CHUNK_SIZE};
-use crate::util::errors::{AppError, Err};
+use crate::util::errors::{AppError, CustomErr};
 use crate::util::header::{patch_u64, write_header, write_placeholder_u64, write_timestamp};
 
 type PackedResult = Result<(String, u64, Vec<ChunkHash>), Box<dyn std::error::Error + Send + Sync>>;
@@ -75,12 +75,12 @@ impl ArchiveWriter {
         // Write header and timestamp
         let chunks_count_position;
         {
-            let mut guard = writer.lock().map_err(|_| Err::LockPoisoned)?;
-            write_header(&mut *guard).map_err(Err::WriterError)?;
-            write_timestamp(&mut *guard).map_err(Err::WriterError)?;
+            let mut guard = writer.lock().map_err(|_| CustomErr::LockPoisoned)?;
+            write_header(&mut *guard).map_err(CustomErr::WriterError)?;
+            write_timestamp(&mut *guard).map_err(CustomErr::WriterError)?;
 
             // Write placeholder for chunk count
-            chunks_count_position = write_placeholder_u64(&mut *guard).map_err(Err::WriterError)?;
+            chunks_count_position = write_placeholder_u64(&mut *guard).map_err(CustomErr::WriterError)?;
             guard.flush()?;
         }
 
@@ -172,7 +172,7 @@ impl ArchiveWriter {
 
         // Write number of chunks in the placeholder
         {
-            let mut guard = self.writer.lock().map_err(|_| Err::LockPoisoned)?;
+            let mut guard = self.writer.lock().map_err(|_| CustomErr::LockPoisoned)?;
             patch_u64(
                 &mut *guard,
                 self.chunks_count_position,
@@ -184,7 +184,7 @@ impl ArchiveWriter {
         self.write_files_metadata(&files_metadata)?;
 
         // Return archive size
-        let guard = self.writer.lock().map_err(|_| Err::LockPoisoned)?;
+        let guard = self.writer.lock().map_err(|_| CustomErr::LockPoisoned)?;
         let file = guard.get_ref();
         let size = file.metadata()?.len();
 
@@ -236,7 +236,7 @@ impl ArchiveWriter {
 
         let mut chunk_buf = vec![0u8; CHUNK_SIZE];
         loop {
-            let bytes_read = reader.read(&mut chunk_buf).map_err(Err::ReaderError)?;
+            let bytes_read = reader.read(&mut chunk_buf).map_err(CustomErr::ReaderError)?;
             if bytes_read == 0 {
                 break;
             }
@@ -254,7 +254,7 @@ impl ArchiveWriter {
                 if let Some(sender) = &self.sender {
                     sender
                         .send(msg)
-                        .map_err(|e| Err::SenderError(Box::new(e)))?;
+                        .map_err(|e| CustomErr::SenderError(Box::new(e)))?;
                 } else {
                     // sender is None, maybe return an error or handle accordingly
                     return Err("Sender channel is closed".into());
@@ -297,7 +297,7 @@ impl ArchiveWriter {
         let file_count = files_metadata.len() as u32;
         guard
             .write_all(&file_count.to_le_bytes())
-            .map_err(Err::WriterError)?;
+            .map_err(CustomErr::WriterError)?;
 
         // For each file: path length, path, original size, chunk count, chunk hashes
         for (path, orig_size, chunk_hashes) in files_metadata {
@@ -306,22 +306,22 @@ impl ArchiveWriter {
 
             guard
                 .write_all(&path_len.to_le_bytes())
-                .map_err(Err::WriterError)?;
-            guard.write_all(path_bytes).map_err(Err::WriterError)?;
+                .map_err(CustomErr::WriterError)?;
+            guard.write_all(path_bytes).map_err(CustomErr::WriterError)?;
             guard
                 .write_all(&orig_size.to_le_bytes())
-                .map_err(Err::WriterError)?;
+                .map_err(CustomErr::WriterError)?;
 
             let chunk_count = chunk_hashes.len() as u32;
             guard
                 .write_all(&chunk_count.to_le_bytes())
-                .map_err(Err::WriterError)?;
+                .map_err(CustomErr::WriterError)?;
 
             for hash in chunk_hashes {
-                guard.write_all(hash).map_err(Err::WriterError)?;
+                guard.write_all(hash).map_err(CustomErr::WriterError)?;
             }
         }
-        guard.flush().map_err(Err::FlushError)?;
+        guard.flush().map_err(CustomErr::FlushError)?;
         Ok(())
     }
 }
