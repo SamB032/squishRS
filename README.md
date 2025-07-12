@@ -79,7 +79,7 @@ squishrs unpack data.squish -o ./restored
 
 ## 🛠 Development
 Run commonly used commands from the provided `Makefile`:
-```shell
+```
 > make help
 all             Build the release binary
 build           Build binary
