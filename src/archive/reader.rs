@@ -66,48 +66,48 @@ impl ArchiveReader {
         // Read the number of chunks
         reader
             .read_exact(&mut buf8)
-            .map_err(|e| AppError::ReaderError(e))?;
+            .map_err(AppError::ReaderError)?;
         let unique_chunk_count = u64::from_le_bytes(buf8);
 
         let chunk_table_offset = reader
             .stream_position()
-            .map_err(|e| AppError::ReaderError(e))?;
+            .map_err(AppError::ReaderError)?;
 
         // Skip all chunks
         for _ in 0..unique_chunk_count {
             // Read chunk hash
             reader
                 .read_exact(&mut buf16)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
 
             // original size
             reader
                 .read_exact(&mut buf8)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
 
             // compressed size
             reader
                 .read_exact(&mut buf8)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             let compressed_size = u64::from_le_bytes(buf8);
 
             // Skip over compressed data
             reader
                 .seek(SeekFrom::Current(compressed_size as i64))
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
         }
 
         // Read number of files (u32)
         let mut buf4 = [0u8; 4];
         reader
             .read_exact(&mut buf4)
-            .map_err(|e| AppError::ReaderError(e))?;
+            .map_err(AppError::ReaderError)?;
         let file_count = u32::from_le_bytes(buf4);
 
         // Get file table offset
         let file_table_offset = reader
             .stream_position()
-            .map_err(|e| AppError::ReaderError(e))?;
+            .map_err(AppError::ReaderError)?;
 
         Ok(Self {
             reader,
@@ -155,7 +155,7 @@ impl ArchiveReader {
     pub fn get_summary(&mut self) -> Result<ArchiveSummary, AppError> {
         self.reader
             .seek(SeekFrom::Start(self.file_table_offset))
-            .map_err(|e| AppError::ReaderError(e))?;
+            .map_err(AppError::ReaderError)?;
 
         let mut buf4 = [0u8; 4];
         let mut buf8 = [0u8; 8];
@@ -167,32 +167,32 @@ impl ArchiveReader {
             // Read Path length
             self.reader
                 .read_exact(&mut buf4)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             let path_length = u32::from_le_bytes(buf4) as usize;
 
             // Read Path
             let mut path_bytes = vec![0u8; path_length];
             self.reader
                 .read_exact(&mut path_bytes)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             let path = String::from_utf8(path_bytes).map_err(|_| AppError::IllegalUTF8)?;
 
             // Read original size
             self.reader
                 .read_exact(&mut buf8)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             let orig_size = u64::from_le_bytes(buf8);
             total_orig_size += orig_size;
 
             // Read number of chunks belonging to file
             self.reader
                 .read_exact(&mut buf4)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             let chunk_count = u32::from_le_bytes(buf4);
 
             self.reader
                 .seek(SeekFrom::Current(chunk_count as i64 * 16))
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
 
             files.push(FileEntry {
                 path,
@@ -277,28 +277,28 @@ impl ArchiveReader {
             let mut hash = [0u8; 16];
             self.reader
                 .read_exact(&mut hash)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
 
             // original size
             self.reader
                 .read_exact(&mut buf8)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             let _orig_size = u64::from_le_bytes(buf8);
 
             // compressed size
             self.reader
                 .read_exact(&mut buf8)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
 
             let compressed_size = u64::from_le_bytes(buf8);
 
             let mut compressed_data = vec![0u8; compressed_size as usize];
             self.reader
                 .read_exact(&mut compressed_data)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
 
             let decompressed =
-                decode_all(&compressed_data[..]).map_err(|e| AppError::ReaderError(e))?;
+                decode_all(&compressed_data[..]).map_err(AppError::ReaderError)?;
             chunk_map.insert(hash, decompressed);
 
             // Increment progress bar if it exists
@@ -319,7 +319,7 @@ impl ArchiveReader {
         // Move to the file table
         self.reader
             .seek(SeekFrom::Start(self.file_table_offset))
-            .map_err(|e| AppError::ReaderError(e))?;
+            .map_err(AppError::ReaderError)?;
 
         let mut buf4 = [0u8; 4];
         let mut buf8 = [0u8; 8];
@@ -336,25 +336,25 @@ impl ArchiveReader {
             // Read Path Length
             self.reader
                 .read_exact(&mut buf4)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             let path_length = u32::from_le_bytes(buf4) as usize;
 
             // Get Full Path of File
             let mut path_bytes = vec![0u8; path_length];
             self.reader
                 .read_exact(&mut path_bytes)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             let relative_path = String::from_utf8(path_bytes).map_err(|_| AppError::IllegalUTF8)?;
 
             // Read Original Size and Disgard
             self.reader
                 .read_exact(&mut buf8)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
 
             // Read Chunk Count
             self.reader
                 .read_exact(&mut buf4)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             let chunk_count = u32::from_le_bytes(buf4);
 
             // Read chunk hashes
@@ -363,7 +363,7 @@ impl ArchiveReader {
                 let mut hash = [0u8; 16];
                 self.reader
                     .read_exact(&mut hash)
-                    .map_err(|e| AppError::ReaderError(e))?;
+                    .map_err(AppError::ReaderError)?;
                 chunks.push(hash);
             }
 

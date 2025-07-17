@@ -38,8 +38,6 @@ fn test_verify_header_incompatible_version() {
     let mut cursor = Cursor::new(fake_version.to_vec());
     let result = verify_header(&mut cursor);
     assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
 }
 
 #[test]

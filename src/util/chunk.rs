@@ -85,7 +85,7 @@ impl ChunkStore {
                 let mut compressed = Vec::new();
                 {
                     let mut encoder = Encoder::new(&mut compressed, COMPRESSION_LEVEL)
-                        .map_err(|e| AppError::EncoderError(e))?;
+                        .map_err(AppError::EncoderError)?;
                     encoder
                         .write_all(chunk)
                         .map_err(|_| AppError::Compression)?;

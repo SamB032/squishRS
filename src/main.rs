@@ -27,7 +27,7 @@ fn run() -> Result<(), AppError> {
     let cli = Cli::parse();
 
     // Cap the number of threads globally that can spawn
-    cap_max_threads(cli.max_threads).map_err(|e| AppError::CapThreadsError(e))?;
+    cap_max_threads(cli.max_threads).map_err(AppError::CapThreadsError)?;
 
     match cli.command {
         Commands::Pack { input, output } => {

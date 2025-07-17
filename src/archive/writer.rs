@@ -76,12 +76,12 @@ impl ArchiveWriter {
         let chunks_count_position;
         {
             let mut guard = writer.lock().map_err(|_| AppError::LockPoisoned)?;
-            write_header(&mut *guard).map_err(|e| AppError::WriterError(e))?;
-            write_timestamp(&mut *guard).map_err(|e| AppError::WriterError(e))?;
+            write_header(&mut *guard).map_err(AppError::WriterError)?;
+            write_timestamp(&mut *guard).map_err(AppError::WriterError)?;
 
             // Write placeholder for chunk count
             chunks_count_position =
-                write_placeholder_u64(&mut *guard).map_err(|e| AppError::WriterError(e))?;
+                write_placeholder_u64(&mut *guard).map_err(AppError::WriterError)?;
             guard.flush()?;
         }
 
@@ -238,7 +238,7 @@ impl ArchiveWriter {
         loop {
             let bytes_read = reader
                 .read(&mut chunk_buf)
-                .map_err(|e| AppError::ReaderError(e))?;
+                .map_err(AppError::ReaderError)?;
             if bytes_read == 0 {
                 break;
             }
@@ -299,7 +299,7 @@ impl ArchiveWriter {
         let file_count = files_metadata.len() as u32;
         guard
             .write_all(&file_count.to_le_bytes())
-            .map_err(|e| AppError::WriterError(e))?;
+            .map_err(AppError::WriterError)?;
 
         // For each file: path length, path, original size, chunk count, chunk hashes
         for (path, orig_size, chunk_hashes) in files_metadata {
@@ -308,26 +308,26 @@ impl ArchiveWriter {
 
             guard
                 .write_all(&path_len.to_le_bytes())
-                .map_err(|e| AppError::WriterError(e))?;
+                .map_err(AppError::WriterError)?;
             guard
                 .write_all(path_bytes)
-                .map_err(|e| AppError::WriterError(e))?;
+                .map_err(AppError::WriterError)?;
             guard
                 .write_all(&orig_size.to_le_bytes())
-                .map_err(|e| AppError::WriterError(e))?;
+                .map_err(AppError::WriterError)?;
 
             let chunk_count = chunk_hashes.len() as u32;
             guard
                 .write_all(&chunk_count.to_le_bytes())
-                .map_err(|e| AppError::WriterError(e))?;
+                .map_err(AppError::WriterError)?;
 
             for hash in chunk_hashes {
                 guard
                     .write_all(hash)
-                    .map_err(|e| AppError::WriterError(e))?;
+                    .map_err(AppError::WriterError)?;
             }
         }
-        guard.flush().map_err(|e| AppError::WriterError(e))?;
+        guard.flush().map_err(AppError::WriterError)?;
         Ok(())
     }
 }
