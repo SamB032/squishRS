@@ -236,9 +236,7 @@ impl ArchiveWriter {
 
         let mut chunk_buf = vec![0u8; CHUNK_SIZE];
         loop {
-            let bytes_read = reader
-                .read(&mut chunk_buf)
-                .map_err(AppError::ReaderError)?;
+            let bytes_read = reader.read(&mut chunk_buf).map_err(AppError::ReaderError)?;
             if bytes_read == 0 {
                 break;
             }
@@ -309,9 +307,7 @@ impl ArchiveWriter {
             guard
                 .write_all(&path_len.to_le_bytes())
                 .map_err(AppError::WriterError)?;
-            guard
-                .write_all(path_bytes)
-                .map_err(AppError::WriterError)?;
+            guard.write_all(path_bytes).map_err(AppError::WriterError)?;
             guard
                 .write_all(&orig_size.to_le_bytes())
                 .map_err(AppError::WriterError)?;
@@ -322,9 +318,7 @@ impl ArchiveWriter {
                 .map_err(AppError::WriterError)?;
 
             for hash in chunk_hashes {
-                guard
-                    .write_all(hash)
-                    .map_err(AppError::WriterError)?;
+                guard.write_all(hash).map_err(AppError::WriterError)?;
             }
         }
         guard.flush().map_err(AppError::WriterError)?;

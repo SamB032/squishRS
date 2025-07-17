@@ -69,9 +69,7 @@ impl ArchiveReader {
             .map_err(AppError::ReaderError)?;
         let unique_chunk_count = u64::from_le_bytes(buf8);
 
-        let chunk_table_offset = reader
-            .stream_position()
-            .map_err(AppError::ReaderError)?;
+        let chunk_table_offset = reader.stream_position().map_err(AppError::ReaderError)?;
 
         // Skip all chunks
         for _ in 0..unique_chunk_count {
@@ -105,9 +103,7 @@ impl ArchiveReader {
         let file_count = u32::from_le_bytes(buf4);
 
         // Get file table offset
-        let file_table_offset = reader
-            .stream_position()
-            .map_err(AppError::ReaderError)?;
+        let file_table_offset = reader.stream_position().map_err(AppError::ReaderError)?;
 
         Ok(Self {
             reader,
@@ -297,8 +293,7 @@ impl ArchiveReader {
                 .read_exact(&mut compressed_data)
                 .map_err(AppError::ReaderError)?;
 
-            let decompressed =
-                decode_all(&compressed_data[..]).map_err(AppError::ReaderError)?;
+            let decompressed = decode_all(&compressed_data[..]).map_err(AppError::ReaderError)?;
             chunk_map.insert(hash, decompressed);
 
             // Increment progress bar if it exists
