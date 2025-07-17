@@ -23,6 +23,7 @@ indicatif = "0.17.11"
 num-format = "0.4.4"
 prettytable = "0.10.0"
 rayon = "1.10.0"
+thiserror = "2.0.12"
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 zstd = "0.13.3"
 

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use crate::util::chunk::ChunkHash;
-use crate::util::errors::{AppError, CustomErr};
+use crate::util::errors::AppError;
 
 pub struct ChunkMessage {
     pub hash: ChunkHash,
@@ -22,18 +22,18 @@ pub fn writer_thread<W: Write + Send + 'static>(
 
         writer
             .write_all(&chunk_msg.hash)
-            .map_err(CustomErr::WriterError)?;
+            .map_err(AppError::WriterError)?;
         writer
             .write_all(&chunk_msg.original_size.to_le_bytes())
-            .map_err(CustomErr::WriterError)?;
+            .map_err(AppError::WriterError)?;
         writer
             .write_all(&compressed_size.to_le_bytes())
-            .map_err(CustomErr::WriterError)?;
+            .map_err(AppError::WriterError)?;
         writer
             .write_all(&chunk_msg.compressed_data)
-            .map_err(CustomErr::WriterError)?;
+            .map_err(AppError::WriterError)?;
     }
-    writer.flush().map_err(CustomErr::FlushError)?;
+    writer.flush().map_err(AppError::FlushError)?;
     Ok(())
 }
 
