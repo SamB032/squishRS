@@ -44,7 +44,8 @@ struct FileRebuildEntry {
 
 impl ArchiveReader {
     pub fn new(archive_path: &Path) -> Result<Self, AppError> {
-        let file = File::open(archive_path).map_err(|_| AppError::FileNotExist(archive_path.to_path_buf()))?;
+        let file = File::open(archive_path)
+            .map_err(|_| AppError::FileNotExist(archive_path.to_path_buf()))?;
         let mut reader = BufReader::new(file);
 
         // Get size of archive
@@ -68,7 +69,9 @@ impl ArchiveReader {
             .map_err(|e| AppError::ReaderError(e))?;
         let unique_chunk_count = u64::from_le_bytes(buf8);
 
-        let chunk_table_offset = reader.stream_position().map_err(|e| AppError::ReaderError(e))?;
+        let chunk_table_offset = reader
+            .stream_position()
+            .map_err(|e| AppError::ReaderError(e))?;
 
         // Skip all chunks
         for _ in 0..unique_chunk_count {
@@ -102,7 +105,9 @@ impl ArchiveReader {
         let file_count = u32::from_le_bytes(buf4);
 
         // Get file table offset
-        let file_table_offset = reader.stream_position().map_err(|e| AppError::ReaderError(e))?;
+        let file_table_offset = reader
+            .stream_position()
+            .map_err(|e| AppError::ReaderError(e))?;
 
         Ok(Self {
             reader,
@@ -292,7 +297,8 @@ impl ArchiveReader {
                 .read_exact(&mut compressed_data)
                 .map_err(|e| AppError::ReaderError(e))?;
 
-            let decompressed = decode_all(&compressed_data[..]).map_err(|e| AppError::ReaderError(e))?;
+            let decompressed =
+                decode_all(&compressed_data[..]).map_err(|e| AppError::ReaderError(e))?;
             chunk_map.insert(hash, decompressed);
 
             // Increment progress bar if it exists
@@ -368,33 +374,37 @@ impl ArchiveReader {
         }
 
         // Rebuild files in parallel
-        entries
-            .par_iter()
-            .try_for_each(
-                |entry| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-                    let full_path = output_dir.join(PathBuf::from(&entry.relative_path));
-                    if let Some(parent) = full_path.parent() {
-                        fs::create_dir_all(parent).map_err(|e| AppError::CreateDirError(parent.to_path_buf(), e))?;
-                    }
+        entries.par_iter().try_for_each(
+            |entry| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+                let full_path = output_dir.join(PathBuf::from(&entry.relative_path));
+                if let Some(parent) = full_path.parent() {
+                    fs::create_dir_all(parent)
+                        .map_err(|e| AppError::CreateDirError(parent.to_path_buf(), e))?;
+                }
 
-                    let mut writer = BufWriter::new(
-                        File::create(&full_path).map_err(|e| AppError::CreateFileError(full_path.to_path_buf(), e))?,
-                    );
-                    for hash in &entry.chunk_hashes {
-                        if let Some(data) = chunk_map.get(hash) {
-                            writer.write_all(data).map_err(|e| AppError::CreateDirError(entry.relative_path.clone().into(), e))?;
-                        } else {
-                            return Err(Box::new(AppError::MissingChunk(entry.relative_path.clone().into())));
-                        }
+                let mut writer = BufWriter::new(
+                    File::create(&full_path)
+                        .map_err(|e| AppError::CreateFileError(full_path.to_path_buf(), e))?,
+                );
+                for hash in &entry.chunk_hashes {
+                    if let Some(data) = chunk_map.get(hash) {
+                        writer.write_all(data).map_err(|e| {
+                            AppError::CreateDirError(entry.relative_path.clone().into(), e)
+                        })?;
+                    } else {
+                        return Err(Box::new(AppError::MissingChunk(
+                            entry.relative_path.clone().into(),
+                        )));
                     }
+                }
 
-                    if let Some(pb) = progress_bar {
-                        pb.inc(1);
-                    }
+                if let Some(pb) = progress_bar {
+                    pb.inc(1);
+                }
 
-                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
-                },
-            )?;
+                Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
+            },
+        )?;
 
         Ok(())
     }

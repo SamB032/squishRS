@@ -322,7 +322,9 @@ impl ArchiveWriter {
                 .map_err(|e| AppError::WriterError(e))?;
 
             for hash in chunk_hashes {
-                guard.write_all(hash).map_err(|e| AppError::WriterError(e))?;
+                guard
+                    .write_all(hash)
+                    .map_err(|e| AppError::WriterError(e))?;
             }
         }
         guard.flush().map_err(|e| AppError::WriterError(e))?;

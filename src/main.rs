@@ -16,7 +16,14 @@ use std::path::Path;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-fn main() -> Result<(), AppError> {
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("Error: {e}");
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), AppError> {
     let cli = Cli::parse();
 
     // Cap the number of threads globally that can spawn
@@ -33,7 +40,7 @@ fn main() -> Result<(), AppError> {
             let files_spinner = create_spinner("Finding Files");
 
             // Count total files for progress bar
-            let files = walk_dir(Path::new(&trimmed_input))?;           
+            let files = walk_dir(Path::new(&trimmed_input))?;
             files_spinner.finish_and_clear();
 
             // Setup progress bar
