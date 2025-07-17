@@ -4,7 +4,7 @@ use std::{io::Write, sync::Arc};
 use xxhash_rust::xxh3::xxh3_128;
 use zstd::stream::Encoder;
 
-use crate::util::errors::CustomErr;
+use crate::util::errors::AppError;
 
 pub type ChunkHash = [u8; 16];
 
@@ -85,9 +85,12 @@ impl ChunkStore {
                 let mut compressed = Vec::new();
                 {
                     let mut encoder = Encoder::new(&mut compressed, COMPRESSION_LEVEL)
-                        .map_err(CustomErr::EncoderError)?;
-                    encoder.write_all(chunk).map_err(CustomErr::EncoderError)?;
-                    encoder.finish().map_err(CustomErr::EncoderError)?;
+                        .map_err(|e| AppError::EncoderError(e))?;
+                    encoder
+                        .write_all(chunk)
+                        .map_err(|e| AppError::EncoderError(e))?;
+
+                    encoder.finish().map_err(|e| AppError::EncoderError(e))?;
                 }
 
                 entry.insert(());

@@ -1,8 +1,6 @@
-use std::error::Error;
 use std::io::{Cursor, Read, Seek};
 
 use crate::util::chunk::{hash_chunk, ChunkStore};
-use crate::util::errors::CustomErr;
 use crate::util::header::{
     convert_timestamp_to_date, magic_version, patch_u64, verify_header, write_header,
     write_placeholder_u64, write_timestamp, PREFIX,
@@ -166,83 +164,4 @@ fn test_compressed_data_is_smaller_or_equal() {
     decoder.read_to_end(&mut decompressed).unwrap();
 
     assert_eq!(decompressed, repetitive_data);
-}
-
-#[test]
-fn test_display_messages() {
-    let cases = vec![
-        (
-            CustomErr::ReadDirError(std::io::Error::other("dummy")),
-            "Directory not found",
-        ),
-        (
-            CustomErr::ReadEntryError(std::io::Error::other("dummy")),
-            "File Entity not found",
-        ),
-        (
-            CustomErr::WriterError(std::io::Error::other("dummy")),
-            "Error writing to squish",
-        ),
-        (
-            CustomErr::ReaderError(std::io::Error::other("dummy")),
-            "Error reading from squish",
-        ),
-        (
-            CustomErr::FlushError(std::io::Error::other("dummy")),
-            "Failed to flush archive writer",
-        ),
-        (CustomErr::LockPoisoned, "Writer mutex was poisoned"),
-        (
-            CustomErr::SenderError(Box::new(std::io::Error::other("dummy"))),
-            "Error sending to writer channel",
-        ),
-        (
-            CustomErr::EncoderError(std::io::Error::other("dummy")),
-            "Error with zstd encoder",
-        ),
-        (
-            CustomErr::CreateDirError(std::io::Error::other("dummy")),
-            "Error with creating directory",
-        ),
-        (
-            CustomErr::CreateFileError(std::io::Error::other("dummy")),
-            "Error with creating file",
-        ),
-        (
-            CustomErr::FileNotExist(std::io::Error::other("dummy")),
-            "Specified file does not exist",
-        ),
-    ];
-
-    for (error, expected_msg) in cases {
-        assert_eq!(error.to_string(), expected_msg);
-    }
-}
-
-#[test]
-fn test_source_returns_inner_error() {
-    // Variants that should return Some(source)
-
-    let with_source_cases = vec![
-        CustomErr::ReadDirError(std::io::Error::other("dummy")),
-        CustomErr::ReadEntryError(std::io::Error::other("dummy")),
-        CustomErr::WriterError(std::io::Error::other("dummy")),
-        CustomErr::ReaderError(std::io::Error::other("dummy")),
-        CustomErr::FlushError(std::io::Error::other("dummy")),
-        CustomErr::SenderError(Box::new(std::io::Error::other("dummy"))),
-        CustomErr::EncoderError(std::io::Error::other("dummy")),
-        CustomErr::CreateDirError(std::io::Error::other("dummy")),
-        CustomErr::CreateFileError(std::io::Error::other("dummy")),
-        CustomErr::FileNotExist(std::io::Error::other("dummy")),
-    ];
-
-    for error in with_source_cases {
-        assert!(error.source().is_some());
-    }
-}
-
-#[test]
-fn test_source_none_for_lock_poisoned() {
-    let error = CustomErr::LockPoisoned;
-    assert!(error.source().is_none());
 }
