@@ -11,18 +11,16 @@ use crate::util::errors::AppError;
 
 use clap::Parser;
 use colored::*;
-use indicatif::ProgressBar;
-use rayon::ThreadPoolBuilder;
+use rayon::{ThreadPoolBuildError, ThreadPoolBuilder};
 use std::path::Path;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-fn main() {
+fn main() -> Result<(), AppError> {
     let cli = Cli::parse();
 
     // Cap the number of threads globally that can spawn
-    cap_max_threads(cli.max_threads)
-        .unwrap_or_else(|e| exit_with_error("Failed to list files", None, &*e));
+    cap_max_threads(cli.max_threads).map_err(|e| AppError::CapThreadsError(e))?;
 
     match cli.command {
         Commands::Pack { input, output } => {
@@ -35,9 +33,7 @@ fn main() {
             let files_spinner = create_spinner("Finding Files");
 
             // Count total files for progress bar
-            let files = walk_dir(Path::new(&trimmed_input)).unwrap_or_else(|e| {
-                exit_with_error("Failed to list files", Some(&files_spinner), &*e)
-            });
+            let files = walk_dir(Path::new(&trimmed_input))?;           
             files_spinner.finish_and_clear();
 
             // Setup progress bar
@@ -45,15 +41,9 @@ fn main() {
 
             // Package file to archive
             let mut archive_writer =
-                ArchiveWriter::new(Path::new(&input), Path::new(&output), Some(&mut pb))
-                    .unwrap_or_else(|e| {
-                        exit_with_error("Failed to Initalise squish", Some(&pb), &*e)
-                    });
+                ArchiveWriter::new(Path::new(&input), Path::new(&output), Some(&mut pb))?;
 
-            let compressed_size = archive_writer.pack(&files).unwrap_or_else(|e| {
-                exit_with_error("Failed to compress into squish", Some(&pb), &*e)
-            });
-
+            let compressed_size = archive_writer.pack(&files)?;
             pb.finish_and_clear();
 
             println!(
@@ -67,13 +57,9 @@ fn main() {
         Commands::List { squish, simple } => {
             let discovery_spinner = create_spinner("Scanning Squish");
 
-            let mut archive_reader = ArchiveReader::new(Path::new(&squish))
-                .unwrap_or_else(|e| exit_with_error("Failed to setup file reader", None, &*e));
+            let mut archive_reader = ArchiveReader::new(Path::new(&squish))?;
 
-            let summary = match archive_reader.get_summary() {
-                Ok(summary) => summary,
-                Err(e) => exit_with_error("Failed to list files", None, &*e),
-            };
+            let summary = archive_reader.get_summary()?;
             discovery_spinner.finish_and_clear();
 
             if simple {
@@ -108,23 +94,20 @@ fn main() {
 
             let mut pb = create_progress_bar(0, "Reading Chunks");
 
-            let mut archive_reader = ArchiveReader::new(Path::new(&squish))
-                .unwrap_or_else(|e| exit_with_error("Failed to setup file reader", Some(&pb), &*e));
+            let mut archive_reader = ArchiveReader::new(Path::new(&squish))?;
 
-            match archive_reader.unpack(Path::new(&output), Some(&mut pb)) {
-                Ok(_) => {
-                    pb.finish_and_clear();
-                    println!(
-                        "{}\n{} was unsquished into /{}",
-                        "Unpacking complete!".green(),
-                        squish,
-                        output
-                    );
-                }
-                Err(e) => exit_with_error("Failed to unpack", Some(&pb), &*e),
-            };
+            archive_reader.unpack(Path::new(&output), Some(&mut pb))?;
+            pb.finish_and_clear();
+            println!(
+                "{}\n{} was unsquished into /{}",
+                "Unpacking complete!".green(),
+                squish,
+                output
+            );
         }
     }
+
+    Ok(())
 }
 
 /// Configures the global Rayon thread pool to use at most `max_number_of_threads` threads.
@@ -159,44 +142,9 @@ fn main() {
 /// # Note
 ///
 /// This function can only be called once per process. All subsequent attempts will return an error.
-fn cap_max_threads(max_number_of_threads: usize) -> Result<(), AppError> {
+fn cap_max_threads(max_number_of_threads: usize) -> Result<(), ThreadPoolBuildError> {
     ThreadPoolBuilder::new()
         .num_threads(max_number_of_threads)
-        .build_global()
-        .map_err(|e| e.into())
-}
-
-/// Handles a fatal error by optionally finishing a progress bar, printing an error message, and exiting the program.
-///
-/// # Parameters
-/// - `msg`: A short context message describing what operation failed.
-/// - `progress_bar`: An optional reference to a `ProgressBar` that will be finished and cleared if present.
-/// - `err`: The error that caused the failure; printed alongside the context message.
-///
-/// # Behavior
-/// If a progress bar is provided, it is finished and cleared before printing the error message.
-/// The error message is printed to standard error with the context message in red.
-/// Finally, the program terminates immediately with exit code 1.
-///
-/// # Panics
-/// This function does not panic; it always terminates the program.
-///
-/// # Examples
-/// ```no_run
-/// use indicatif::ProgressBar;
-///
-/// fn example(progress_bar: Option<&ProgressBar>, err: &(dyn std::error::Error)) -> ! {
-///     exit_with_error("Failed to complete operation", progress_bar, err);
-/// }
-/// ```
-fn exit_with_error(
-    msg: &str,
-    progress_bar: Option<&ProgressBar>,
-    err: &dyn std::error::Error,
-) -> ! {
-    if let Some(progress_bar) = progress_bar {
-        progress_bar.finish_and_clear();
-    }
-    eprintln!("{}: {}", msg.red(), err);
-    std::process::exit(1);
+        .build_global()?;
+    Ok(())
 }

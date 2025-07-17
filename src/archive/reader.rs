@@ -8,7 +8,7 @@ use rayon::prelude::*;
 use zstd::decode_all;
 
 use crate::util::chunk::ChunkHash;
-use crate::util::errors::{AppError, CustomErr};
+use crate::util::errors::AppError;
 use crate::util::header::{convert_timestamp_to_date, verify_header};
 
 pub struct ArchiveReader {
@@ -44,7 +44,7 @@ struct FileRebuildEntry {
 
 impl ArchiveReader {
     pub fn new(archive_path: &Path) -> Result<Self, AppError> {
-        let file = File::open(archive_path).map_err(CustomErr::FileNotExist)?;
+        let file = File::open(archive_path).map_err(|_| AppError::FileNotExist(archive_path.to_path_buf()))?;
         let mut reader = BufReader::new(file);
 
         // Get size of archive
@@ -65,44 +65,44 @@ impl ArchiveReader {
         // Read the number of chunks
         reader
             .read_exact(&mut buf8)
-            .map_err(CustomErr::ReaderError)?;
+            .map_err(|e| AppError::ReaderError(e))?;
         let unique_chunk_count = u64::from_le_bytes(buf8);
 
-        let chunk_table_offset = reader.stream_position().map_err(CustomErr::ReaderError)?;
+        let chunk_table_offset = reader.stream_position().map_err(|e| AppError::ReaderError(e))?;
 
         // Skip all chunks
         for _ in 0..unique_chunk_count {
             // Read chunk hash
             reader
                 .read_exact(&mut buf16)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
 
             // original size
             reader
                 .read_exact(&mut buf8)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
 
             // compressed size
             reader
                 .read_exact(&mut buf8)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
             let compressed_size = u64::from_le_bytes(buf8);
 
             // Skip over compressed data
             reader
                 .seek(SeekFrom::Current(compressed_size as i64))
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
         }
 
         // Read number of files (u32)
         let mut buf4 = [0u8; 4];
         reader
             .read_exact(&mut buf4)
-            .map_err(CustomErr::ReaderError)?;
+            .map_err(|e| AppError::ReaderError(e))?;
         let file_count = u32::from_le_bytes(buf4);
 
         // Get file table offset
-        let file_table_offset = reader.stream_position().map_err(CustomErr::ReaderError)?;
+        let file_table_offset = reader.stream_position().map_err(|e| AppError::ReaderError(e))?;
 
         Ok(Self {
             reader,
@@ -150,7 +150,7 @@ impl ArchiveReader {
     pub fn get_summary(&mut self) -> Result<ArchiveSummary, AppError> {
         self.reader
             .seek(SeekFrom::Start(self.file_table_offset))
-            .map_err(CustomErr::ReaderError)?;
+            .map_err(|e| AppError::ReaderError(e))?;
 
         let mut buf4 = [0u8; 4];
         let mut buf8 = [0u8; 8];
@@ -162,32 +162,32 @@ impl ArchiveReader {
             // Read Path length
             self.reader
                 .read_exact(&mut buf4)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
             let path_length = u32::from_le_bytes(buf4) as usize;
 
             // Read Path
             let mut path_bytes = vec![0u8; path_length];
             self.reader
                 .read_exact(&mut path_bytes)
-                .map_err(CustomErr::ReaderError)?;
-            let path = String::from_utf8(path_bytes)?;
+                .map_err(|e| AppError::ReaderError(e))?;
+            let path = String::from_utf8(path_bytes).map_err(|_| AppError::IllegalUTF8)?;
 
             // Read original size
             self.reader
                 .read_exact(&mut buf8)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
             let orig_size = u64::from_le_bytes(buf8);
             total_orig_size += orig_size;
 
             // Read number of chunks belonging to file
             self.reader
                 .read_exact(&mut buf4)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
             let chunk_count = u32::from_le_bytes(buf4);
 
             self.reader
                 .seek(SeekFrom::Current(chunk_count as i64 * 16))
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
 
             files.push(FileEntry {
                 path,
@@ -254,7 +254,7 @@ impl ArchiveReader {
     fn read_chunks(
         &mut self,
         progress_bar: Option<&ProgressBar>,
-    ) -> Result<HashMap<ChunkHash, Vec<u8>>, Box<dyn std::error::Error>> {
+    ) -> Result<HashMap<ChunkHash, Vec<u8>>, AppError> {
         // Seek to chunk table offset
         self.reader
             .seek(std::io::SeekFrom::Start(self.chunk_table_offset))?;
@@ -272,26 +272,27 @@ impl ArchiveReader {
             let mut hash = [0u8; 16];
             self.reader
                 .read_exact(&mut hash)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
 
             // original size
             self.reader
                 .read_exact(&mut buf8)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
             let _orig_size = u64::from_le_bytes(buf8);
 
             // compressed size
             self.reader
                 .read_exact(&mut buf8)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
+
             let compressed_size = u64::from_le_bytes(buf8);
 
             let mut compressed_data = vec![0u8; compressed_size as usize];
             self.reader
                 .read_exact(&mut compressed_data)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
 
-            let decompressed = decode_all(&compressed_data[..]).map_err(CustomErr::ReaderError)?;
+            let decompressed = decode_all(&compressed_data[..]).map_err(|e| AppError::ReaderError(e))?;
             chunk_map.insert(hash, decompressed);
 
             // Increment progress bar if it exists
@@ -308,11 +309,11 @@ impl ArchiveReader {
         chunk_map: &HashMap<ChunkHash, Vec<u8>>,
         output_dir: &Path,
         progress_bar: Option<&ProgressBar>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), AppError> {
         // Move to the file table
         self.reader
             .seek(SeekFrom::Start(self.file_table_offset))
-            .map_err(CustomErr::ReaderError)?;
+            .map_err(|e| AppError::ReaderError(e))?;
 
         let mut buf4 = [0u8; 4];
         let mut buf8 = [0u8; 8];
@@ -329,25 +330,25 @@ impl ArchiveReader {
             // Read Path Length
             self.reader
                 .read_exact(&mut buf4)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
             let path_length = u32::from_le_bytes(buf4) as usize;
 
             // Get Full Path of File
             let mut path_bytes = vec![0u8; path_length];
             self.reader
                 .read_exact(&mut path_bytes)
-                .map_err(CustomErr::ReaderError)?;
-            let relative_path = String::from_utf8(path_bytes)?;
+                .map_err(|e| AppError::ReaderError(e))?;
+            let relative_path = String::from_utf8(path_bytes).map_err(|_| AppError::IllegalUTF8)?;
 
             // Read Original Size and Disgard
             self.reader
                 .read_exact(&mut buf8)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
 
             // Read Chunk Count
             self.reader
                 .read_exact(&mut buf4)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
             let chunk_count = u32::from_le_bytes(buf4);
 
             // Read chunk hashes
@@ -356,7 +357,7 @@ impl ArchiveReader {
                 let mut hash = [0u8; 16];
                 self.reader
                     .read_exact(&mut hash)
-                    .map_err(CustomErr::ReaderError)?;
+                    .map_err(|e| AppError::ReaderError(e))?;
                 chunks.push(hash);
             }
 
@@ -373,19 +374,17 @@ impl ArchiveReader {
                 |entry| -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     let full_path = output_dir.join(PathBuf::from(&entry.relative_path));
                     if let Some(parent) = full_path.parent() {
-                        fs::create_dir_all(parent).map_err(CustomErr::CreateDirError)?;
+                        fs::create_dir_all(parent).map_err(|e| AppError::CreateDirError(parent.to_path_buf(), e))?;
                     }
 
                     let mut writer = BufWriter::new(
-                        File::create(&full_path).map_err(CustomErr::CreateFileError)?,
+                        File::create(&full_path).map_err(|e| AppError::CreateFileError(full_path.to_path_buf(), e))?,
                     );
                     for hash in &entry.chunk_hashes {
                         if let Some(data) = chunk_map.get(hash) {
-                            writer.write_all(data).map_err(CustomErr::CreateDirError)?;
+                            writer.write_all(data).map_err(|e| AppError::CreateDirError(entry.relative_path.clone().into(), e))?;
                         } else {
-                            return Err(
-                                format!("Missing chunk for file: {}", entry.relative_path).into()
-                            );
+                            return Err(Box::new(AppError::MissingChunk(entry.relative_path.clone().into())));
                         }
                     }
 
@@ -395,8 +394,7 @@ impl ArchiveReader {
 
                     Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
                 },
-            )
-            .map_err(|e| -> Box<dyn std::error::Error> { e.to_string().into() })?;
+            )?;
 
         Ok(())
     }

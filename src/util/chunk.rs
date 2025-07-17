@@ -88,9 +88,9 @@ impl ChunkStore {
                         .map_err(|e| AppError::EncoderError(e))?;
                     encoder
                         .write_all(chunk)
-                        .map_err(|e| AppError::EncoderError(e))?;
+                        .map_err(|_| AppError::Compression)?;
 
-                    encoder.finish().map_err(|e| AppError::EncoderError(e))?;
+                    encoder.finish().map_err(|_| AppError::Compression)?;
                 }
 
                 entry.insert(());

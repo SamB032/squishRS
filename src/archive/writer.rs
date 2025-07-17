@@ -9,7 +9,7 @@ use rayon::prelude::*;
 
 use crate::fsutil::writer::{writer_thread, ChunkMessage, ThreadSafeWriter};
 use crate::util::chunk::{ChunkHash, ChunkStore, CHUNK_SIZE};
-use crate::util::errors::{AppError, CustomErr};
+use crate::util::errors::AppError;
 use crate::util::header::{patch_u64, write_header, write_placeholder_u64, write_timestamp};
 
 type PackedResult = Result<(String, u64, Vec<ChunkHash>), Box<dyn std::error::Error + Send + Sync>>;
@@ -62,7 +62,7 @@ impl ArchiveWriter {
     /// let output = Path::new("output.squish");
     /// let input = Path::new("./files");
     /// let writer = ArchiveWriter::new(input, output, None)?;
-    /// ```
+    /// ```;
     pub fn new(
         input_dir: &Path,
         output_path: &Path,
@@ -75,13 +75,13 @@ impl ArchiveWriter {
         // Write header and timestamp
         let chunks_count_position;
         {
-            let mut guard = writer.lock().map_err(|_| CustomErr::LockPoisoned)?;
-            write_header(&mut *guard).map_err(CustomErr::WriterError)?;
-            write_timestamp(&mut *guard).map_err(CustomErr::WriterError)?;
+            let mut guard = writer.lock().map_err(|_| AppError::LockPoisoned)?;
+            write_header(&mut *guard).map_err(|e| AppError::WriterError(e))?;
+            write_timestamp(&mut *guard).map_err(|e| AppError::WriterError(e))?;
 
             // Write placeholder for chunk count
             chunks_count_position =
-                write_placeholder_u64(&mut *guard).map_err(CustomErr::WriterError)?;
+                write_placeholder_u64(&mut *guard).map_err(|e| AppError::WriterError(e))?;
             guard.flush()?;
         }
 
@@ -145,7 +145,7 @@ impl ArchiveWriter {
     /// let archive_size = writer.pack(&files)?;
     /// println!("Archive written ({} bytes)", archive_size);
     /// ```
-    pub fn pack(&mut self, files: &[PathBuf]) -> Result<u64, Box<dyn std::error::Error>> {
+    pub fn pack(&mut self, files: &[PathBuf]) -> Result<u64, AppError> {
         // Run process_file function concurrently
         let files_metadata: Vec<_> = files
             .par_iter()
@@ -159,8 +159,7 @@ impl ArchiveWriter {
 
                 Ok(result)
             })
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| -> Box<dyn std::error::Error> { e.to_string().into() })?;
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Close sender so writer thread can finish
         if let Some(sender) = self.sender.take() {
@@ -173,7 +172,7 @@ impl ArchiveWriter {
 
         // Write number of chunks in the placeholder
         {
-            let mut guard = self.writer.lock().map_err(|_| CustomErr::LockPoisoned)?;
+            let mut guard = self.writer.lock().map_err(|_| AppError::LockPoisoned)?;
             patch_u64(
                 &mut *guard,
                 self.chunks_count_position,
@@ -185,7 +184,7 @@ impl ArchiveWriter {
         self.write_files_metadata(&files_metadata)?;
 
         // Return archive size
-        let guard = self.writer.lock().map_err(|_| CustomErr::LockPoisoned)?;
+        let guard = self.writer.lock().map_err(|_| AppError::LockPoisoned)?;
         let file = guard.get_ref();
         let size = file.metadata()?.len();
 
@@ -239,7 +238,7 @@ impl ArchiveWriter {
         loop {
             let bytes_read = reader
                 .read(&mut chunk_buf)
-                .map_err(CustomErr::ReaderError)?;
+                .map_err(|e| AppError::ReaderError(e))?;
             if bytes_read == 0 {
                 break;
             }
@@ -257,7 +256,7 @@ impl ArchiveWriter {
                 if let Some(sender) = &self.sender {
                     sender
                         .send(msg)
-                        .map_err(|e| CustomErr::SenderError(Box::new(e)))?;
+                        .map_err(|e| AppError::SenderError(Box::new(e)))?;
                 } else {
                     // sender is None, maybe return an error or handle accordingly
                     return Err("Sender channel is closed".into());
@@ -292,7 +291,7 @@ impl ArchiveWriter {
     fn write_files_metadata(
         &self,
         files_metadata: &[(String, u64, Vec<ChunkHash>)],
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), AppError> {
         // Lock the shared writer once
         let mut guard = self.writer.lock().unwrap();
 
@@ -300,7 +299,7 @@ impl ArchiveWriter {
         let file_count = files_metadata.len() as u32;
         guard
             .write_all(&file_count.to_le_bytes())
-            .map_err(CustomErr::WriterError)?;
+            .map_err(|e| AppError::WriterError(e))?;
 
         // For each file: path length, path, original size, chunk count, chunk hashes
         for (path, orig_size, chunk_hashes) in files_metadata {
@@ -309,24 +308,24 @@ impl ArchiveWriter {
 
             guard
                 .write_all(&path_len.to_le_bytes())
-                .map_err(CustomErr::WriterError)?;
+                .map_err(|e| AppError::WriterError(e))?;
             guard
                 .write_all(path_bytes)
-                .map_err(CustomErr::WriterError)?;
+                .map_err(|e| AppError::WriterError(e))?;
             guard
                 .write_all(&orig_size.to_le_bytes())
-                .map_err(CustomErr::WriterError)?;
+                .map_err(|e| AppError::WriterError(e))?;
 
             let chunk_count = chunk_hashes.len() as u32;
             guard
                 .write_all(&chunk_count.to_le_bytes())
-                .map_err(CustomErr::WriterError)?;
+                .map_err(|e| AppError::WriterError(e))?;
 
             for hash in chunk_hashes {
-                guard.write_all(hash).map_err(CustomErr::WriterError)?;
+                guard.write_all(hash).map_err(|e| AppError::WriterError(e))?;
             }
         }
-        guard.flush().map_err(CustomErr::FlushError)?;
+        guard.flush().map_err(|e| AppError::WriterError(e))?;
         Ok(())
     }
 }

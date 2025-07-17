@@ -7,8 +7,8 @@ pub enum AppError {
     #[error("I/O error: {0}")]
     Io(#[from] io::Error),
 
-    #[error("Failed to read directory `{0}`: {1}")]
-    ReadDirError(PathBuf, #[source] io::Error),
+    #[error("Failed to read directory {0}: {1}")]
+    ReadDirError(String, #[source] io::Error),
 
     #[error("Failed to read entry in `{0}`: {1}")]
     ReadEntryError(PathBuf, #[source] io::Error),
@@ -22,8 +22,8 @@ pub enum AppError {
     #[error("Failed to flush archive writer: {0}")]
     FlushError(#[source] io::Error),
 
-    #[error("Compression error: {0}")]
-    Compression(String),
+    #[error("Compression error")]
+    Compression,
 
     #[error("Archive format error: {0}")]
     Archive(String),
@@ -46,6 +46,21 @@ pub enum AppError {
     #[error("Specified file does not exist: `{0}`")]
     FileNotExist(PathBuf),
 
+    #[error("Illegal UTF8 detected")]
+    IllegalUTF8,
+
+    #[error("Missing Chunk for File: `{0}`")]
+    MissingChunk(PathBuf),
+
+    #[error("Unable to Cap Maximum Threads: {0}")]
+    CapThreadsError(#[source] rayon::ThreadPoolBuildError),
+
     #[error("Unknown error: {0}")]
     Other(String),
+}
+
+impl From<Box<dyn std::error::Error + Send + Sync>> for AppError {
+    fn from(e: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        AppError::Other(e.to_string())
+    }
 }
