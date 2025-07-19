@@ -34,7 +34,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run tests
-        run: cargo +nightly tarpaulin --all-features --timeout 120 --out HTML
+        run: cargo +nightly tarpaulin --all-features --timeout 120 --out HTML --fail-under 80
 
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v4

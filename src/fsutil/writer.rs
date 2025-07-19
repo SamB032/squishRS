@@ -1,4 +1,3 @@
-use crossbeam::channel::Receiver;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::sync::Arc;
@@ -6,6 +5,8 @@ use std::sync::Mutex;
 
 use crate::util::chunk::ChunkHash;
 use crate::util::errors::AppError;
+
+use crossbeam::channel::Receiver;
 
 pub struct ChunkMessage {
     pub hash: ChunkHash,
