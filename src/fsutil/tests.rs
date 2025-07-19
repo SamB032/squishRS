@@ -1,12 +1,12 @@
+use crossbeam::channel::unbounded;
 use std::fs;
 use std::fs::File;
+use std::io::{BufWriter, Cursor, Read, Seek, SeekFrom, Write};
 use std::path::Path;
-use crossbeam::channel::unbounded;
-use std::io::{Cursor, BufWriter, Write, Read, SeekFrom, Seek};
 use std::sync::{Arc, Mutex};
 
-use crate::fsutil::writer::{writer_thread, ThreadSafeWriter, ChunkMessage};
 use crate::fsutil::directory::walk_dir;
+use crate::fsutil::writer::{writer_thread, ChunkMessage, ThreadSafeWriter};
 
 use tempfile::{tempdir, tempfile};
 
@@ -78,7 +78,7 @@ fn test_writer_thread_happy_path() {
     // Setup in-memory writer
     let buffer = Vec::new();
     let writer = Cursor::new(buffer);
-    
+
     // Setup channel and send a ChunkMessage
     let (tx, rx) = unbounded();
 
@@ -90,7 +90,8 @@ fn test_writer_thread_happy_path() {
         hash,
         compressed_data: data.clone(),
         original_size,
-    }).unwrap();
+    })
+    .unwrap();
 
     drop(tx); // Close channel to end the loop
 
