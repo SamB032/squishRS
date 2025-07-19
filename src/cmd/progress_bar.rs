@@ -16,6 +16,7 @@ use std::time::Duration;
 /// # Example
 ///
 /// ```
+/// use squishrs::cmd::progress_bar::create_progress_bar;
 /// let pb = create_progress_bar(100, "Processing");
 /// for i in 0..100 {
 ///     pb.inc(1);
@@ -48,9 +49,9 @@ pub fn create_progress_bar(length: u64, message: &'static str) -> ProgressBar {
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```
+/// use squishrs::cmd::progress_bar::create_spinner;
 /// let pb = create_spinner("Scanning files");
-/// // Perform work...
 /// pb.finish_with_message("Done scanning files");
 /// ```
 pub fn create_spinner(message: &'static str) -> ProgressBar {

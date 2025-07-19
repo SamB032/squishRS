@@ -55,14 +55,14 @@ impl ArchiveWriter {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```no_run
     /// use squishrs::archive::ArchiveWriter;
     /// use std::path::Path;
     ///
     /// let output = Path::new("output.squish");
     /// let input = Path::new("./files");
-    /// let writer = ArchiveWriter::new(input, output, None)?;
-    /// ```;
+    /// let writer = ArchiveWriter::new(input, output, None).expect("Failed to setup writer");
+    /// ```
     pub fn new(
         input_dir: &Path,
         output_path: &Path,
@@ -136,13 +136,16 @@ impl ArchiveWriter {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```no_run
     /// use squishrs::archive::ArchiveWriter;
     /// use std::path::PathBuf;
+    /// use std::path::Path;
     ///
-    /// let mut writer = ArchiveWriter::new("output.squish")?;
+    /// let mut writer = ArchiveWriter::new(Path::new("output"), Path::new("output.squish"), None).expect("Failed to setup writer");
+    ///
     /// let files = vec![PathBuf::from("file1.txt"), PathBuf::from("file2.txt")];
-    /// let archive_size = writer.pack(&files)?;
+    /// let archive_size = writer.pack(&files).expect("Failed to setup writer");
+    ///
     /// println!("Archive written ({} bytes)", archive_size);
     /// ```
     pub fn pack(&mut self, files: &[PathBuf]) -> Result<u64, AppError> {

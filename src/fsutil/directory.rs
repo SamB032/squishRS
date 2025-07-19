@@ -29,8 +29,8 @@ use crate::util::errors::AppError;
 ///
 /// # Examples
 ///
-/// ```no_run
-/// use squish::fsutil::walk_dir;
+/// ```rust
+/// use squishrs::fsutil::directory::walk_dir;
 /// use std::path::Path;
 ///
 /// let files = walk_dir(Path::new(".")).expect("Failed to walk directory");
