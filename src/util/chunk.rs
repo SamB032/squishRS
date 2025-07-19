@@ -36,8 +36,12 @@ type ReturnInsertChunk = Result<InsertReturn, Box<dyn std::error::Error + Send +
 ///
 /// # examples
 ///
-/// ```
-/// chunk::hash_chunk(&chunk_buf);
+/// ```rust
+/// use squishrs::util::chunk::hash_chunk;
+///
+/// let chunk_buf = b"example chunk data";
+/// let hash = hash_chunk(chunk_buf);
+/// println!("Chunk hash: {:?}", hash);
 /// ```
 pub fn hash_chunk(chunk: &[u8]) -> ChunkHash {
     let hash = xxh3_128(chunk);
@@ -112,10 +116,36 @@ impl ChunkStore {
     /// # Example
     ///
     /// ```
+    /// use squishrs::util::chunk::ChunkStore;
+    ///
     /// let store = ChunkStore::new();
     /// assert_eq!(store.len(), 0);
     /// ```
     pub fn len(&self) -> u64 {
         self.primary_store.len() as u64
+    }
+
+    /// Returns true if the chunkstore is empty
+    ///
+    /// # Returns
+    ///
+    /// * `bool` - true if chunkstore is empty, false otherwise
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use squishrs::util::chunk::ChunkStore;
+    ///
+    /// let store = ChunkStore::new();
+    /// assert_eq!(store.is_empty(), true);
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl Default for ChunkStore {
+    fn default() -> Self {
+        Self::new()
     }
 }

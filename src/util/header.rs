@@ -26,7 +26,11 @@ pub fn magic_version() -> Vec<u8> {
 /// # examples
 ///
 /// ```
-/// chunk::write_header(&mut writer);
+/// use squishrs::util::header::write_header;
+/// use std::io::Cursor;
+///
+/// let mut writer = Cursor::new(Vec::new());
+/// write_header(&mut writer).expect("Failed to write header");
 /// ```
 pub fn write_header<W: Write>(writer: &mut W) -> std::io::Result<()> {
     let magic_version = magic_version();
@@ -75,7 +79,9 @@ pub fn write_timestamp<W: Write>(writer: &mut W) -> std::io::Result<()> {
 /// # Examples
 ///
 /// ```
-/// let formatted_date = convert_timestamp_to_date(1686890000)?;
+/// use squishrs::util::header::convert_timestamp_to_date;
+///
+/// let formatted_date = convert_timestamp_to_date(1686890000).expect("Cannot convert to date");
 /// println!("{}", formatted_date); // e.g. "17:49 16/06/2025"
 /// ```
 pub fn convert_timestamp_to_date(timestamp_sec: u64) -> Result<String, AppError> {
@@ -101,7 +107,14 @@ pub fn convert_timestamp_to_date(timestamp_sec: u64) -> Result<String, AppError>
 /// # examples
 ///
 /// ```
-/// chunk::verify_header(&mut writer);
+/// use squishrs::util::header::{write_header, verify_header};
+/// use std::io::Cursor;
+///
+/// let mut buffer = Cursor::new(Vec::new());
+/// write_header(&mut buffer).expect("Failed to write header");
+/// buffer.set_position(0);
+///
+/// verify_header(&mut buffer).expect("Invalid Header");
 /// ```
 pub fn verify_header<R: Read>(reader: &mut R) -> Result<String, AppError> {
     // Allocate buffer for prefix + version (prefix + 8 bytes for "00.01.01" format)
@@ -166,9 +179,15 @@ pub fn verify_header<R: Read>(reader: &mut R) -> Result<String, AppError> {
 /// # Example
 ///
 /// ```rust
-/// let pos = write_placeholder_u64(&mut writer)?;
+/// use std::io::Cursor;
+/// use squishrs::util::header::patch_u64;
+/// use squishrs::util::header::write_placeholder_u64;
+///
+/// let mut writer = Cursor::new(Vec::new());
+/// let pos = write_placeholder_u64(&mut writer).expect("Failed to write placeholder");
 /// // ... later ...
-/// patch_u64(&mut writer, pos, actual_value)?;
+/// let actual_value = 2;
+/// patch_u64(&mut writer, pos, actual_value).expect("Failed to patch int");
 /// ```
 pub fn write_placeholder_u64<W: Write + Seek>(writer: &mut W) -> Result<u64, std::io::Error> {
     let pos = writer.stream_position()?;
@@ -195,7 +214,12 @@ pub fn write_placeholder_u64<W: Write + Seek>(writer: &mut W) -> Result<u64, std
 /// # Example
 ///
 /// ```rust
-/// patch_u64(&mut writer, pos, 1234)?;
+/// use squishrs::util::header::patch_u64;
+/// use std::io::{Seek, SeekFrom, Cursor};
+///
+/// let mut writer = Cursor::new(Vec::new());
+/// let pos = writer.seek(SeekFrom::Current(0)).unwrap();
+/// patch_u64(&mut writer, pos, 1234).expect("Failed to patch value");
 /// ```
 pub fn patch_u64<W: Write + Seek>(
     writer: &mut W,

@@ -79,6 +79,19 @@ pub enum Commands {
 /// # Example
 ///
 /// ```rust
+/// use squishrs::cmd::build_list_summary_table;
+/// use squishrs::archive::reader::ArchiveSummary;
+///
+/// let summary = ArchiveSummary {
+///     unique_chunks: 10,
+///     total_original_size: 5000,
+///     archive_size: 3500,
+///     reduction_percentage: 30.0,
+///     squish_creation_date: "2025-07-19".to_string(),
+///     squish_version: "1.0".to_string(),
+///     files: vec![], // empty for example
+/// };
+///
 /// build_list_summary_table(&summary);
 /// ```
 pub fn build_list_summary_table(summary: &ArchiveSummary) -> String {

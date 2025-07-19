@@ -142,9 +142,13 @@ impl ArchiveReader {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// let mut reader = ArchiveReader::open("backup.squish")?;
-    /// let summary = reader.get_summary()?;
+    /// ```no_run
+    /// use squishrs::archive::ArchiveReader;
+    /// use std::path::Path;
+    ///
+    /// let mut reader = ArchiveReader::new(Path::new("backup.squish")).expect("Failed to read
+    /// squish");
+    /// let summary = reader.get_summary().expect("Failed to get summary");
     /// println!("Files: {}", summary.files.len());
     /// println!("Reduction: {:.2}%", summary.reduction_percentage);
     /// ```
