@@ -1,4 +1,3 @@
-use crossbeam::channel::unbounded;
 use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Cursor, Read, Seek, SeekFrom, Write};
@@ -8,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use crate::fsutil::directory::walk_dir;
 use crate::fsutil::writer::{writer_thread, ChunkMessage, ThreadSafeWriter};
 
+use crossbeam::channel::unbounded;
 use tempfile::{tempdir, tempfile};
 
 #[test]

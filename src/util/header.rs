@@ -61,7 +61,7 @@ pub fn write_timestamp<W: Write>(writer: &mut W) -> std::io::Result<()> {
 /// Converts a UNIX timestamp (seconds since epoch) into a formatted
 /// local date and time string.
 ///
-/// The returned string is formatted as `"HH:MM DD/MM/YYYY"`.
+/// The returned string is formatted as result `"HH:MM DD/MM/YYYY"`.
 ///
 /// # Arguments
 ///
@@ -75,7 +75,7 @@ pub fn write_timestamp<W: Write>(writer: &mut W) -> std::io::Result<()> {
 /// # Examples
 ///
 /// ```
-/// let formatted_date = convert_timestamp_to_date(1686890000);
+/// let formatted_date = convert_timestamp_to_date(1686890000)?;
 /// println!("{}", formatted_date); // e.g. "17:49 16/06/2025"
 /// ```
 pub fn convert_timestamp_to_date(timestamp_sec: u64) -> Result<String, AppError> {
