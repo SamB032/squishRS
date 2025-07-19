@@ -1,6 +1,7 @@
 use std::io::{Cursor, Read, Seek};
 
 use crate::util::chunk::{hash_chunk, ChunkStore};
+use crate::util::errors::AppError;
 use crate::util::header::{
     convert_timestamp_to_date, magic_version, patch_u64, verify_header, write_header,
     write_placeholder_u64, write_timestamp, PREFIX,
@@ -162,4 +163,27 @@ fn test_compressed_data_is_smaller_or_equal() {
     decoder.read_to_end(&mut decompressed).unwrap();
 
     assert_eq!(decompressed, repetitive_data);
+}
+
+#[test]
+fn test_from_boxed_error() {
+    use std::error::Error;
+
+    // Create a boxed std::io::Error
+    let io_err = std::io::Error::other("some error");
+    let boxed_err: Box<dyn Error + Send + Sync> = Box::new(io_err);
+
+    // Convert it into AppError using `From`
+    let app_err: AppError = boxed_err.into();
+
+    // Check that the correct AppError variant is used
+    match app_err {
+        AppError::Other(msg) => {
+            assert!(
+                msg.contains("some error"),
+                "Expected error message to contain 'some error'"
+            );
+        }
+        _ => panic!("Expected AppError::Other variant"),
+    }
 }
