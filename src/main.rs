@@ -18,7 +18,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("Error: {e}");
+        eprintln!("{}: {e}", "Error".red());
         std::process::exit(1);
     }
 }
