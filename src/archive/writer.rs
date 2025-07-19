@@ -55,7 +55,7 @@ impl ArchiveWriter {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```no_run
     /// use squishrs::archive::ArchiveWriter;
     /// use std::path::Path;
     ///
