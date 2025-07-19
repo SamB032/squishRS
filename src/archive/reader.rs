@@ -61,7 +61,7 @@ impl ArchiveReader {
 
         // Get creation time
         reader.read_exact(&mut buf8)?;
-        let squish_creation_time = convert_timestamp_to_date(u64::from_le_bytes(buf8));
+        let squish_creation_time = convert_timestamp_to_date(u64::from_le_bytes(buf8))?;
 
         // Read the number of chunks
         reader

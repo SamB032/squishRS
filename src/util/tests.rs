@@ -50,7 +50,7 @@ fn test_write_timestamp_and_convert() {
     bytes.copy_from_slice(&buffer[..8]);
     let ts = u64::from_le_bytes(bytes);
 
-    let formatted = convert_timestamp_to_date(ts);
+    let formatted = convert_timestamp_to_date(ts).expect("Inavlid timestamp");
     assert!(
         formatted.contains('/') && formatted.contains(':'),
         "Unexpected formatted date: {formatted}"
@@ -60,7 +60,7 @@ fn test_write_timestamp_and_convert() {
 #[test]
 fn test_convert_timestamp_to_date_known_value() {
     let ts = 1686890000; // Mon, 16 Jun 2023 17:46:40 GMT
-    let result = convert_timestamp_to_date(ts);
+    let result = convert_timestamp_to_date(ts).expect("Inavlid timestamp");
     assert!(result.ends_with("/2023") || result.ends_with("/2025")); // Accept drift from TZ/localtime
 }
 

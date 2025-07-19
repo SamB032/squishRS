@@ -55,6 +55,9 @@ pub enum AppError {
     #[error("Unable to Cap Maximum Threads: {0}")]
     CapThreadsError(#[source] rayon::ThreadPoolBuildError),
 
+    #[error("Invalid timestamp in squish: {0}")]
+    InvalidTimeStamp(#[source] io::Error),
+
     #[error("Unknown error: {0}")]
     Other(String),
 }

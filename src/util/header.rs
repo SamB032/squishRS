@@ -1,4 +1,5 @@
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::ErrorKind;
+use std::io::{Error, Read, Seek, SeekFrom, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, Local, TimeZone};
@@ -77,12 +78,14 @@ pub fn write_timestamp<W: Write>(writer: &mut W) -> std::io::Result<()> {
 /// let formatted_date = convert_timestamp_to_date(1686890000);
 /// println!("{}", formatted_date); // e.g. "17:49 16/06/2025"
 /// ```
-pub fn convert_timestamp_to_date(timestamp_sec: u64) -> String {
+pub fn convert_timestamp_to_date(timestamp_sec: u64) -> Result<String, AppError> {
     let datetime: DateTime<Local> = Local
         .timestamp_opt(timestamp_sec as i64, 0)
         .single()
-        .expect("Invalid timestamp");
-    datetime.format("%H:%M %d/%m/%Y").to_string()
+        .ok_or_else(|| {
+            AppError::InvalidTimeStamp(Error::new(ErrorKind::InvalidInput, "Invalid timestamp"))
+        })?;
+    Ok(datetime.format("%H:%M %d/%m/%Y").to_string())
 }
 
 /// Verify the header of an archive
