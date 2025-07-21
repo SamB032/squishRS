@@ -5,11 +5,13 @@ use std::path::{Path, PathBuf};
 
 use indicatif::ProgressBar;
 use rayon::prelude::*;
-use zstd::decode_all;
+use zstd::bulk::decompress;
 
 use crate::util::chunk::ChunkHash;
 use crate::util::errors::AppError;
 use crate::util::header::{convert_timestamp_to_date, verify_header};
+
+const EXPECTED_MAX_CHUNK_SIZE: usize = 10 * 1024 * 1024; // 10 MB
 
 pub struct ArchiveReader {
     reader: BufReader<File>,
@@ -297,7 +299,9 @@ impl ArchiveReader {
                 .read_exact(&mut compressed_data)
                 .map_err(AppError::ReaderError)?;
 
-            let decompressed = decode_all(&compressed_data[..]).map_err(AppError::ReaderError)?;
+            let decompressed = decompress(&compressed_data, EXPECTED_MAX_CHUNK_SIZE)
+                .map_err(AppError::ReaderError)?;
+
             chunk_map.insert(hash, decompressed);
 
             // Increment progress bar if it exists
