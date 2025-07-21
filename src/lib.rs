@@ -65,10 +65,10 @@ pub fn run() -> Result<(), AppError> {
             if simple {
                 // Make it machine readable, could be piped to fzf
                 println!(
-                    "squish_size(bytes): {}, original_size(bytes): {}, reduction: {:.2}%, number_of_files: {}, chunks_count: {}",
+                    "squish_size(bytes): {}, original_size(bytes): {}, compression ratio: {:.2}%, number_of_files: {}, chunks_count: {}",
                     summary.archive_size,
                     summary.total_original_size,
-                    summary.reduction_percentage,
+                    summary.compression_ratio,
                     summary.files.len(),
                     summary.unique_chunks
                 );

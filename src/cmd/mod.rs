@@ -113,8 +113,8 @@ pub fn build_list_summary_table(summary: &ArchiveSummary) -> String {
         format_bytes(summary.total_original_size)
     ]);
     summary_table.add_row(row![
-        "Reduction Percentage",
-        format!("{:.1}%", summary.reduction_percentage)
+        "Compression Ratio",
+        format!("{:.1}%", summary.compression_ratio)
     ]);
     summary_table.add_row(row![
         "Number of files",

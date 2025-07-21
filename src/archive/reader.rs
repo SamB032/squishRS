@@ -26,7 +26,7 @@ pub struct ArchiveSummary {
     pub unique_chunks: u64,
     pub total_original_size: u64,
     pub archive_size: u64,
-    pub reduction_percentage: f64,
+    pub compression_ratio: f64,
     pub squish_creation_date: String,
     pub squish_version: String,
     pub files: Vec<FileEntry>,
@@ -200,9 +200,9 @@ impl ArchiveReader {
             });
         }
 
-        // Calculate reduction percentage
-        let reduction_percentage = if total_orig_size > 0 {
-            (1.0 - (self.archive_size as f64 / total_orig_size as f64)) * 100.0
+        // Calculate compression ratio
+        let compression_ratio = if total_orig_size > 0 {
+            (self.archive_size as f64 / total_orig_size as f64) * 100.0
         } else {
             0.0
         };
@@ -211,7 +211,7 @@ impl ArchiveReader {
             unique_chunks: self.number_of_chunks,
             total_original_size: total_orig_size,
             archive_size: self.archive_size,
-            reduction_percentage,
+            compression_ratio,
             squish_creation_date: self.squish_creation_time.clone(),
             squish_version: self.squish_version.clone(),
             files,
