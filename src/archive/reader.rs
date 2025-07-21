@@ -150,7 +150,7 @@ impl ArchiveReader {
     /// squish");
     /// let summary = reader.get_summary().expect("Failed to get summary");
     /// println!("Files: {}", summary.files.len());
-    /// println!("Reduction: {:.2}%", summary.reduction_percentage);
+    /// println!("Compression Ratio: {:.2}%", summary.compression_ratio);
     /// ```
     pub fn get_summary(&mut self) -> Result<ArchiveSummary, AppError> {
         self.reader

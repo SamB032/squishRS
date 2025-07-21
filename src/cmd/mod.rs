@@ -86,7 +86,7 @@ pub enum Commands {
 ///     unique_chunks: 10,
 ///     total_original_size: 5000,
 ///     archive_size: 3500,
-///     reduction_percentage: 30.0,
+///     compression_ratio: 30.0,
 ///     squish_creation_date: "2025-07-19".to_string(),
 ///     squish_version: "1.0".to_string(),
 ///     files: vec![], // empty for example
