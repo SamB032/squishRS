@@ -86,7 +86,7 @@ pub enum Commands {
 ///     unique_chunks: 10,
 ///     total_original_size: 5000,
 ///     archive_size: 3500,
-///     reduction_percentage: 30.0,
+///     compression_ratio: 30.0,
 ///     squish_creation_date: "2025-07-19".to_string(),
 ///     squish_version: "1.0".to_string(),
 ///     files: vec![], // empty for example
@@ -113,8 +113,8 @@ pub fn build_list_summary_table(summary: &ArchiveSummary) -> String {
         format_bytes(summary.total_original_size)
     ]);
     summary_table.add_row(row![
-        "Reduction Percentage",
-        format!("{:.1}%", summary.reduction_percentage)
+        "Compression Ratio",
+        format!("{:.1}%", summary.compression_ratio)
     ]);
     summary_table.add_row(row![
         "Number of files",

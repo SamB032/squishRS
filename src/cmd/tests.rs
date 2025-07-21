@@ -40,7 +40,7 @@ fn test_build_list_summary_table() {
         unique_chunks: 32,
         total_original_size: 100,
         archive_size: 20,
-        reduction_percentage: 80.0,
+        compression_ratio: 80.0,
         squish_creation_date: "DATE".to_string(),
         squish_version: "1.0.1".to_string(),
         files: Vec::new(),

@@ -131,7 +131,7 @@ fn test_archive_reader_get_summary() -> Result<(), AppError> {
     assert_eq!(summary.unique_chunks, 1);
     assert_eq!(summary.total_original_size, 4);
     assert!(summary.archive_size > 0);
-    assert!(summary.reduction_percentage <= 0.0);
+    assert!(summary.compression_ratio > 0.0);
     assert_eq!(summary.files.len(), 1);
     assert_eq!(summary.files[0].path, "file1.txt");
 
