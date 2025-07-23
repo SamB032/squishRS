@@ -145,6 +145,5 @@ pub fn run() -> Result<(), AppError> {
 pub fn cap_max_threads(max_number_of_threads: usize) -> Result<(), ThreadPoolBuildError> {
     ThreadPoolBuilder::new()
         .num_threads(max_number_of_threads)
-        .build_global()?;
-    Ok(())
+        .build_global()
 }

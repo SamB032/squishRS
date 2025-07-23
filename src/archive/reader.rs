@@ -11,8 +11,6 @@ use crate::util::chunk::ChunkHash;
 use crate::util::errors::AppError;
 use crate::util::header::{convert_timestamp_to_date, verify_header};
 
-const EXPECTED_MAX_CHUNK_SIZE: usize = 10 * 1024 * 1024; // 10 MB
-
 pub struct ArchiveReader {
     reader: BufReader<File>,
     archive_size: u64,
@@ -285,13 +283,15 @@ impl ArchiveReader {
             self.reader
                 .read_exact(&mut buf8)
                 .map_err(AppError::ReaderError)?;
-            let _orig_size = u64::from_le_bytes(buf8);
+            let orig_size = u64::from_le_bytes(buf8);
+            let orig_size_usize = orig_size
+                .try_into()
+                .map_err(|_| AppError::InvalidChunkSize(orig_size))?;
 
             // compressed size
             self.reader
                 .read_exact(&mut buf8)
                 .map_err(AppError::ReaderError)?;
-
             let compressed_size = u64::from_le_bytes(buf8);
 
             let mut compressed_data = vec![0u8; compressed_size as usize];
@@ -299,7 +299,7 @@ impl ArchiveReader {
                 .read_exact(&mut compressed_data)
                 .map_err(AppError::ReaderError)?;
 
-            let decompressed = decompress(&compressed_data, EXPECTED_MAX_CHUNK_SIZE)
+            let decompressed = decompress(&compressed_data, orig_size_usize)
                 .map_err(AppError::ReaderError)?;
 
             chunk_map.insert(hash, decompressed);
