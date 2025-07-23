@@ -9,7 +9,7 @@ use crate::util::errors::AppError;
 pub type ChunkHash = [u8; 16];
 
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
-const COMPRESSION_LEVEL: i32 = 15;
+const COMPRESSION_LEVEL: i32 = 12;
 
 pub struct InsertReturn {
     pub hash: ChunkHash,
