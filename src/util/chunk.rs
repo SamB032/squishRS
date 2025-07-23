@@ -1,15 +1,15 @@
 use dashmap::mapref::entry::Entry;
 use dashmap::DashMap;
-use std::{io::Write, sync::Arc};
+use std::sync::Arc;
 use xxhash_rust::xxh3::xxh3_128;
-use zstd::stream::Encoder;
+use zstd::bulk::compress;
 
 use crate::util::errors::AppError;
 
 pub type ChunkHash = [u8; 16];
 
 pub const CHUNK_SIZE: usize = 2048 * 1024; // 2MB
-const COMPRESSION_LEVEL: i32 = 15;
+const COMPRESSION_LEVEL: i32 = 12;
 
 pub struct InsertReturn {
     pub hash: ChunkHash,
@@ -86,16 +86,8 @@ impl ChunkStore {
                 compressed_data: None,
             }),
             Entry::Vacant(entry) => {
-                let mut compressed = Vec::new();
-                {
-                    let mut encoder = Encoder::new(&mut compressed, COMPRESSION_LEVEL)
-                        .map_err(AppError::EncoderError)?;
-                    encoder
-                        .write_all(chunk)
-                        .map_err(|_| AppError::Compression)?;
-
-                    encoder.finish().map_err(|_| AppError::Compression)?;
-                }
+                let compressed =
+                    compress(chunk, COMPRESSION_LEVEL).map_err(|_| AppError::Compression)?;
 
                 entry.insert(());
 

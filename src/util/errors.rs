@@ -52,6 +52,9 @@ pub enum AppError {
     #[error("Missing Chunk for File: `{0}`")]
     MissingChunk(PathBuf),
 
+    #[error("Invalid chunk size: {0} bytes")]
+    InvalidChunkSize(u64),
+
     #[error("Unable to Cap Maximum Threads: {0}")]
     CapThreadsError(#[source] rayon::ThreadPoolBuildError),
 
