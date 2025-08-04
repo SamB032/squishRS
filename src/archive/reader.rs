@@ -299,8 +299,8 @@ impl ArchiveReader {
                 .read_exact(&mut compressed_data)
                 .map_err(AppError::ReaderError)?;
 
-            let decompressed = decompress(&compressed_data, orig_size_usize)
-                .map_err(AppError::ReaderError)?;
+            let decompressed =
+                decompress(&compressed_data, orig_size_usize).map_err(AppError::ReaderError)?;
 
             chunk_map.insert(hash, decompressed);
 

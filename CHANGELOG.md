@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2025-08-04
+### Added
+- Unit and Integration tests
+- Fail when Unit test coverage is below 80%
+- 20% CPU usage reduction by switching to `zstd::bulk::{compress,decode}`
+- Used `thiserror` crate for better structured custom error messages
+
+### Changed
+- Used `thiserror` crate for better structured custom error messages
+
 ## [1.1.0] - 2025-07-06
 ### Added
 - Switch from `sha256` to `xxhas128` for better performance and compression size
