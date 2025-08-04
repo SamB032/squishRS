@@ -13,7 +13,7 @@ use prettytable::{format::consts::FORMAT_NO_LINESEP_WITH_TITLE, row, Cell, Row, 
 #[clap(about = "Compact, compress, and deduplicate files into a single archive")]
 pub struct Cli {
     /// Maximum number of threads to use
-    #[arg(long = "max-threads", short = 'j', default_value_t = 30, global = true)]
+    #[arg(long = "max-threads", short = 'j', default_value_t = 25, global = true)]
     pub max_threads: usize,
 
     #[clap(subcommand)]

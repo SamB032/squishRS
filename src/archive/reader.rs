@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use indicatif::ProgressBar;
 use rayon::prelude::*;
-use zstd::decode_all;
+use zstd::bulk::decompress;
 
 use crate::util::chunk::ChunkHash;
 use crate::util::errors::AppError;
@@ -283,13 +283,15 @@ impl ArchiveReader {
             self.reader
                 .read_exact(&mut buf8)
                 .map_err(AppError::ReaderError)?;
-            let _orig_size = u64::from_le_bytes(buf8);
+            let orig_size = u64::from_le_bytes(buf8);
+            let orig_size_usize = orig_size
+                .try_into()
+                .map_err(|_| AppError::InvalidChunkSize(orig_size))?;
 
             // compressed size
             self.reader
                 .read_exact(&mut buf8)
                 .map_err(AppError::ReaderError)?;
-
             let compressed_size = u64::from_le_bytes(buf8);
 
             let mut compressed_data = vec![0u8; compressed_size as usize];
@@ -297,7 +299,9 @@ impl ArchiveReader {
                 .read_exact(&mut compressed_data)
                 .map_err(AppError::ReaderError)?;
 
-            let decompressed = decode_all(&compressed_data[..]).map_err(AppError::ReaderError)?;
+            let decompressed =
+                decompress(&compressed_data, orig_size_usize).map_err(AppError::ReaderError)?;
+
             chunk_map.insert(hash, decompressed);
 
             // Increment progress bar if it exists

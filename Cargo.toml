@@ -1,6 +1,6 @@
 [package]
 name = "squishrs"
-version = "1.1.0"
+version = "1.2.0"
 authors = ["Sam Boffey sam.boffey04@gmail.com"]
 edition = "2021"
 
@@ -31,6 +31,9 @@ zstd = "0.13.3"
 assert_cmd = "2.0.17"
 predicates = "3.1.3"
 tempfile = "3.20.0"
+
+[profile.release]
+debug = true
 
 [[bin]]
 name = "squishrs"
