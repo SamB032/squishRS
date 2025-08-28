@@ -42,3 +42,11 @@ jobs:
           name: code-coverage-report
           path: tarpaulin-report.html
 
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@0.22.0
+        with:
+          scan-type: "fs"
+          scan-ref: "target/release/squishrs"
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL,HIGH,MEDIUM"
