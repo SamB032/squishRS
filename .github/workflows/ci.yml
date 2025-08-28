@@ -25,7 +25,7 @@ jobs:
           rustup component add rustfmt --toolchain nightly
 
       - name: Build
-        run: cargo build
+        run: cargo build --release
 
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
@@ -42,3 +42,11 @@ jobs:
           name: code-coverage-report
           path: tarpaulin-report.html
 
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "fs"
+          scan-ref: "target/release/squishrs"
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL,HIGH,MEDIUM"
