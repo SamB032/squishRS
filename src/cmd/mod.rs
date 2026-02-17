@@ -147,7 +147,7 @@ pub fn build_list_summary_table(summary: &ArchiveSummary) -> String {
 
     // Sort directories by file count descending
     let mut dir_counts_vec: Vec<_> = dir_counts.into_iter().collect();
-    dir_counts_vec.sort_by(|a, b| b.1.cmp(&a.1));
+    dir_counts_vec.sort_by_key(|x| Reverse(x.1));
 
     for (dir, count) in dir_counts_vec {
         breakdown_table.add_row(row![dir, count.to_formatted_string(&Locale::en)]);
