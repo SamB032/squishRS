@@ -1,6 +1,7 @@
 pub mod progress_bar;
 
 use std::collections::HashMap;
+use std::cmp::Reverse;
 
 use crate::archive::reader::ArchiveSummary;
 use byte_unit::{Byte, UnitType};
